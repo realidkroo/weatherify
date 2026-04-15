@@ -18,17 +18,17 @@ To compile this project, you will need:
 
 ## how to compile
 
-### 1: Build the Rust Engine
-Navigate to the `rust_engine` directory and build the library for the desired Android architecture (usually `aarch64` for physical devices):
+### 1 | Build the Rust Engine
+go to the `rust_engine` directory and build the library for the desired Android architecture (usually `aarch64` for physical devices):
 
 ```bash
 cd rust_engine
 cargo ndk -t arm64-v8a -o ../app/src/main/jniLibs build --release
 ```
 
-*Note: This command compiles the Rust code into a `.so` library and places it in the correct Android project directory.*
+*note: This command compiles the Rust code into a `.so` library and places it in the correct android project directory.*
 
-### 2: Build the Android App
+### 2 | build the Android App
 You can now build the app using Android Studio or the command line:
 
 ```bash
@@ -36,7 +36,7 @@ You can now build the app using Android Studio or the command line:
 ./gradlew assembleDebug
 ```
 
-### Step 3: Run the App
+### 3 | run the app
 - Connect an android device or start an emulator.
 - Use Android Studio's **run** button or:
   ```bash
