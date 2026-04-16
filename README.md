@@ -2,6 +2,18 @@
 open source android weather app, but with style i guess
 ## THIS thing is not done yet please wait
 
+To-do list | roadmap
+- Making layout perfectly suitable for all device
+- Making widget
+- Moon system
+- Multi-Api support
+- Rain effect
+- Cloud effect
+- optimisatiion at cloud engine
+- Multiple theme support
+- Google material 3 expressiive support
+- layout support
+
 Try it on release if there any, or clone this project and compile itt
 To compile this project, you will need:
 
