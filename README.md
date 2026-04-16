@@ -14,7 +14,9 @@ To-do list | roadmap
 - Google material 3 expressiive support
 - layout support
 
-Try it on release if there any, or clone this project and compile itt
+Try it on release https://github.com/realidkroo/weatherify/releases/tag/DEV
+
+or clone this project and compile itt
 To compile this project, you will need:
 
 ### 1. Android Development Environment
