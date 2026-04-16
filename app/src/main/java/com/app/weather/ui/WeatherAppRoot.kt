@@ -200,15 +200,19 @@ fun WeatherAppRoot() {
 
     LaunchedEffect(activeOverlay, activeNestedOverlay) {
         when {
-            activeNestedOverlay != NestedOverlay.None -> stackedOverlayProgress.animateTo(1f, spring(dampingRatio = 0.85f, stiffness = 400f))
+            activeNestedOverlay != NestedOverlay.None -> {
+                stackedOverlayProgress.animateTo(1f, spring(dampingRatio = 0.95f, stiffness = 350f))
+            }
             activeOverlay != OverlayType.None -> {
-                if (stackedOverlayProgress.value > 0f) stackedOverlayProgress.animateTo(0f, spring(dampingRatio = 0.95f, stiffness = 500f))
+                if (stackedOverlayProgress.value > 0f) {
+                    stackedOverlayProgress.animateTo(0f, spring(dampingRatio = 0.95f, stiffness = 350f))
+                }
                 displayedOverlay = activeOverlay
-                overlayProgress.animateTo(1f, spring(dampingRatio = 0.85f, stiffness = 300f))
+                overlayProgress.animateTo(1f, spring(dampingRatio = 0.95f, stiffness = 350f))
             }
             else -> {
-                launch { stackedOverlayProgress.animateTo(0f, spring(dampingRatio = 0.95f, stiffness = 500f)) }
-                overlayProgress.animateTo(0f, spring(dampingRatio = 0.95f, stiffness = 400f))
+                launch { stackedOverlayProgress.animateTo(0f, spring(dampingRatio = 0.95f, stiffness = 350f)) }
+                overlayProgress.animateTo(0f, spring(dampingRatio = 0.95f, stiffness = 350f))
                 displayedOverlay = OverlayType.None
             }
         }
@@ -384,7 +388,8 @@ fun WeatherAppRoot() {
                         .pointerInput(Unit) {
                             detectVerticalDragGestures(
                                 onDragEnd = {
-                                    if (overlayProgress.value < 0.8f) handleBack() else coroutineScope.launch { overlayProgress.animateTo(1f, spring(stiffness = 400f)) }
+                                    if (overlayProgress.value < 0.8f) handleBack() 
+                                    else coroutineScope.launch { overlayProgress.animateTo(1f, spring(dampingRatio = 0.95f, stiffness = 350f)) }
                                 },
                                 onVerticalDrag = { change, dragAmount ->
                                     change.consume()
@@ -410,7 +415,8 @@ fun WeatherAppRoot() {
                         .pointerInput(Unit) {
                             detectVerticalDragGestures(
                                 onDragEnd = {
-                                    if (stackedOverlayProgress.value < 0.8f) activeNestedOverlay = NestedOverlay.None else coroutineScope.launch { stackedOverlayProgress.animateTo(1f, spring(stiffness = 400f)) }
+                                    if (stackedOverlayProgress.value < 0.8f) activeNestedOverlay = NestedOverlay.None 
+                                    else coroutineScope.launch { stackedOverlayProgress.animateTo(1f, spring(dampingRatio = 0.95f, stiffness = 350f)) }
                                 },
                                 onVerticalDrag = { change, dragAmount ->
                                     change.consume()

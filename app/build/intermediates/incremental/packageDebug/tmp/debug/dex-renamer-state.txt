@@ -1,4 +1,4 @@
-#Thu Apr 16 23:47:20 WIB 2026
+#Fri Apr 17 00:05:09 WIB 2026
 base.0=/Users/roo/Documents/weatherify/app/build/intermediates/dex/debug/mergeExtDexDebug/classes.dex
 base.1=/Users/roo/Documents/weatherify/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex
 base.2=/Users/roo/Documents/weatherify/app/build/intermediates/dex/debug/mergeProjectDexDebug/12/classes.dex
