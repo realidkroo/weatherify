@@ -2,6 +2,7 @@
 open source android weather app, but with style i guess
 ## THIS thing is not done yet please wait
 # Known annoying bugs - PULL TO REFRESH ITS WORKINGG but its refreshing unlimitedly.... Infinitely 
+##Known minor bugs - debuc selector buggy, then bug on low dpi devuces. No tablet mode. No lanscape mode
 To-do list | roadmap
 - Making layout perfectly suitable for all device
 - Making widget
