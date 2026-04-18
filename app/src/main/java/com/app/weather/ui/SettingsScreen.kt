@@ -9,7 +9,9 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -42,7 +44,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.asComposeRenderEffect
@@ -74,7 +78,7 @@ fun OdometerOverlayContent(
     onTest: (from: Int, target: Int) -> Unit
 ) {
     val digitOptions = remember { (0..9).map { it.toString() } }
-    
+
     var fromTens by remember { mutableIntStateOf(0) }
     var fromOnes by remember { mutableIntStateOf(0) }
     var targetTens by remember { mutableIntStateOf(0) }
@@ -89,29 +93,27 @@ fun OdometerOverlayContent(
         Icon(Icons.Outlined.Animation, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp).padding(bottom = 12.dp))
         Text("Odometer Animation", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text("Change it foor the temp on the front :3", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-        
+
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
             Text("FROM", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text("TARGET", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
 
         Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(24.dp))) {
             Box(modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.9f).height(42.dp).clip(RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.08f)))
 
             Row(modifier = Modifier.fillMaxSize()) {
-                // ─── FROM SECTION ───
                 Row(modifier = Modifier.weight(1f)) {
                     Box(modifier = Modifier.weight(1f)) { WheelPicker(options = digitOptions, selectedIndex = fromTens, onIndexSelected = { fromTens = it }) }
                     Box(modifier = Modifier.weight(1f)) { WheelPicker(options = digitOptions, selectedIndex = fromOnes, onIndexSelected = { fromOnes = it }) }
                 }
-                
+
                 Box(modifier = Modifier.width(1.dp).fillMaxHeight(0.5f).align(Alignment.CenterVertically).background(Color.White.copy(alpha = 0.1f)))
 
-                // ─── TARGET SECTION ───
                 Row(modifier = Modifier.weight(1f)) {
                     Box(modifier = Modifier.weight(1f)) { WheelPicker(options = digitOptions, selectedIndex = targetTens, onIndexSelected = { targetTens = it }) }
                     Box(modifier = Modifier.weight(1f)) { WheelPicker(options = digitOptions, selectedIndex = targetOnes, onIndexSelected = { targetOnes = it }) }
@@ -146,14 +148,14 @@ fun ExperimentalOverlayContent(
         Icon(Icons.Default.Science, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp).padding(bottom = 12.dp))
         Text("Experimental Menu", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text("Modify weather and time visual states", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-        
+
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
             Text("WEATHER", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text("TIME OF DAY", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
 
         Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(24.dp))) {
@@ -200,20 +202,20 @@ fun SettingsScreen(
     var navType by remember { mutableStateOf(SubNavType.Push) }
 
     var displayedTitle by remember { mutableStateOf(
-        when (currentMenu) { 
+        when (currentMenu) {
             "DebugMenu" -> "Debug Menus"
             "General" -> "General"
             "Appearance" -> "Appearance"
-            else -> "Settings" 
+            else -> "Settings"
         }
     ) }
 
     LaunchedEffect(currentMenu, navType) {
-        val newTitle = when (currentMenu) { 
+        val newTitle = when (currentMenu) {
             "DebugMenu" -> "Debug Menus"
             "General" -> "General"
             "Appearance" -> "Appearance"
-            else -> "Settings" 
+            else -> "Settings"
         }
         displayedTitle = newTitle
     }
@@ -222,17 +224,10 @@ fun SettingsScreen(
     val swipeOffset   = remember { Animatable(0f) }
     var swipeBgMenu   by remember { mutableStateOf<String?>(null) }
 
-    val screenWidthPx = with(LocalDensity.current) {
-        LocalConfiguration.current.screenWidthDp.dp.toPx()
-    }
+    val screenWidthPx = with(LocalDensity.current) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
 
     fun handleBack(requestedNavType: SubNavType = SubNavType.Pop) {
-        if (currentMenu != "Main") {
-            navType = requestedNavType
-            onMenuChange("Main")
-        } else {
-            onBack()
-        }
+        if (currentMenu != "Main") { navType = requestedNavType; onMenuChange("Main") } else onBack()
     }
 
     BackHandler(enabled = currentMenu != "Main") { handleBack(SubNavType.Pop) }
@@ -245,11 +240,12 @@ fun SettingsScreen(
     @Composable
     fun MenuList(menuState: String, state: LazyListState, scrollable: Boolean, modifier: Modifier = Modifier) {
         val isMain = menuState == "Main"
-        
+
         LazyColumn(
             state = state,
             modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = if (isMain) 150.dp else 210.dp, bottom = 120.dp, start = 24.dp, end = 24.dp),
+            // FIX: slightly more top padding so content sits comfortably below the expanded header
+            contentPadding = PaddingValues(top = if (isMain) 168.dp else 252.dp, bottom = 120.dp, start = 24.dp, end = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             userScrollEnabled = scrollable
         ) {
@@ -259,24 +255,24 @@ fun SettingsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(cardBgColor)
-                                .padding(horizontal = 20.dp, vertical = 16.dp)
-                        ) { Text("Find some settings...", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 16.sp) }
-                    }
-                    
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(Color(0xFF3B2323))
-                                .padding(vertical = 4.dp)
+                                .height(42.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(cardBgColor),
+                            contentAlignment = Alignment.CenterStart
                         ) {
+                            Text(
+                                text = "Find some settings...",
+                                color = Color.Gray,
+                                fontSize = 14.sp,
+                                modifier = Modifier.padding(horizontal = 20.dp)
+                            )
+                        }
+                    }
+                    item {
+                        Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(Color(0xFF3B2323)).padding(vertical = 4.dp)) {
                             SettingsItemOverlay("Need permission", "Tap here to fix!", Icons.Outlined.WarningAmber, tint = Color(0xFFFF6B6B)) { onOpenOverlay(OverlayType.Permissions) }
                         }
                     }
-
                     item {
                         SettingsGroup {
                             SettingsItemOverlay("General", "general settings", Icons.Outlined.Settings) { navType = SubNavType.Push; onMenuChange("General") }
@@ -300,7 +296,7 @@ fun SettingsScreen(
                             SettingsItemOverlay("Visibility Unit", "Meters/kilometers", Icons.Outlined.Visibility) {}
                             SettingsItemOverlay("Refresh cycle", "${settings.refreshIntervalSec / 60}m ${settings.refreshIntervalSec % 60}s", Icons.AutoMirrored.Outlined.RotateRight) { onOpenOverlay(OverlayType.RefreshCycle) }
                             SettingsSwitch("Location Based Weather", "display weather based on the location youre in using IP address or GPS. if disabled, the app will use default city.", Icons.Outlined.LocationOn, settings.locationBasedWeather) { onUpdateSettings(settings.copy(locationBasedWeather = it)) }
-                            androidx.compose.animation.AnimatedVisibility(visible = settings.locationBasedWeather) {
+                            if (settings.locationBasedWeather) {
                                 SettingsSwitch("Precise Location", "Use high-accuracy GPS. may consume more battery.", Icons.Outlined.MyLocation, settings.preciseLocation) { onUpdateSettings(settings.copy(preciseLocation = it)) }
                             }
                         }
@@ -325,16 +321,8 @@ fun SettingsScreen(
                 "DebugMenu" -> {
                     item {
                         SettingsGroup {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { onSelectWeather(WeatherType.entries.toTypedArray().random()) }
-                                    .padding(horizontal = 20.dp, vertical = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.Outlined.Shuffle, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(18.dp))
-                                }
+                            Row(modifier = Modifier.fillMaxWidth().clickable { onSelectWeather(WeatherType.entries.toTypedArray().random()) }.padding(horizontal = 20.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.secondaryContainer), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Shuffle, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer, modifier = Modifier.size(18.dp)) }
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Text("Cycle Random Weather", color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             }
@@ -343,26 +331,13 @@ fun SettingsScreen(
                             SettingsSwitch("Demo Mode", "Force static placeholder data for UI testing", Icons.Outlined.Science, settings.demoMode) { onUpdateSettings(settings.copy(demoMode = it)) }
                         }
                     }
-                    
                     item { Text("Experimental Options", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp) }
-                    
                     item {
                         SettingsGroup {
-                            SettingsItemOverlay(
-                                title = "Experimental Menu",
-                                subtitle = "Modify weather and time visual states",
-                                icon = Icons.Default.Science,
-                                onClick = { onOpenOverlay(OverlayType.Experimental) }
-                            )
-                            SettingsItemOverlay(
-                                title = "Odometer Test",
-                                subtitle = "Test the scrolling number",
-                                icon = Icons.Outlined.Animation,
-                                onClick = { onOpenOverlay(OverlayType.Odometer) }
-                            )
+                            SettingsItemOverlay("Experimental Menu", "Modify weather and time visual states", Icons.Default.Science) { onOpenOverlay(OverlayType.Experimental) }
+                            SettingsItemOverlay("Odometer Test", "Test the scrolling number", Icons.Outlined.Animation) { onOpenOverlay(OverlayType.Odometer) }
                         }
                     }
-                    
                     item {
                         SettingsGroup {
                             WeatherType.entries.forEach { type ->
@@ -376,40 +351,60 @@ fun SettingsScreen(
     }
 
     val activeScrollState = when (currentMenu) {
-        "General" -> generalListState
-        "Appearance" -> appearanceListState
-        "DebugMenu" -> debugListState
-        else -> mainListState
+        "General" -> generalListState; "Appearance" -> appearanceListState; "DebugMenu" -> debugListState; else -> mainListState
     }
 
-    val scrollOffset by remember(currentMenu) {
-        derivedStateOf {
-            if (activeScrollState.firstVisibleItemIndex == 0)
-                activeScrollState.firstVisibleItemScrollOffset.toFloat()
-            else 150f
-        }
-    }
-    
+    val scrollOffset by remember(currentMenu) { derivedStateOf { if (activeScrollState.firstVisibleItemIndex == 0) activeScrollState.firstVisibleItemScrollOffset.toFloat() else 150f } }
+
     val isMain = currentMenu == "Main"
     val headerProgress = (scrollOffset / 150f).coerceIn(0f, 1f)
-    
-    // Liquid Header Variables
-    val iconX = (48f * headerProgress).dp
-    val iconY = (52f * (1f - headerProgress)).dp
-    val titleX = (if (isMain) 0f else 100f * headerProgress).dp
-    val titleY = (if (isMain) (44f * (1f - headerProgress)) else (96f * (1f - headerProgress) + 4f * headerProgress)).dp
-    val titleScale = 1f - 0.4f * headerProgress
+
+    val physicsProgress by animateFloatAsState(
+        targetValue = headerProgress,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 200f), label = "liquid"
+    )
+
+    val titleScale = 1f - 0.4f * physicsProgress
+    val titleX = (if (isMain) 0f else 88f * physicsProgress).dp
+
+    // Pill alignment:
+    //   collapsed header = 120dp, status bar pad = 64dp → usable = 56dp
+    //   pill height = 42dp → pill top-edge = (56-42)/2 = 7dp from padded top
+    //   pill vertical center = 7 + 21 = 28dp from padded top
+    //   title fontSize=40sp at scale=0.6 → visual height ≈ 24dp
+    //   to vertically center text inside pill: y = 28 - 24/2 = 16dp  (TransformOrigin top-left)
+    //   but since scale anchors at top-left we want titleY = pill_top = 7dp  → text top lands at 7dp, scaled height fits
+    //   empirically 4dp looks best when scrolled (text needs to sit a bit higher)
+    val titleY = (
+            if (isMain) {
+                (56f * (1f - physicsProgress) + 4f * physicsProgress)
+            } else {
+                (100f * (1f - physicsProgress) + 4f * physicsProgress)
+            }
+            ).dp
+
+    // Floating icon: starts at 56dp below padded top, slides right to 48dp when scrolled
+    val iconX = (48f * physicsProgress).dp
+    val iconY = (56f * (1f - physicsProgress)).dp
+    // 0.7x bigger at unscrolled: 2.7 → 1.0 when scrolled
+    val iconScale = 2.7f - 1.7f * physicsProgress
+
+    // Arrow box is 36dp at (0,0) of padded box → its center = (18dp, 18dp)
+    // Icon  box is 36dp at (iconX, iconY)       → its center = (iconX+18dp, iconY+18dp)
+    // We pass these centers directly into the Canvas (no canvas offset trick needed)
+    // Canvas is full-size so coordinates are in padded-box space directly.
 
     val metaballModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         Modifier.graphicsLayer {
-            val blur = android.graphics.RenderEffect.createBlurEffect(15f, 15f, android.graphics.Shader.TileMode.CLAMP)
+            val blur = android.graphics.RenderEffect.createBlurEffect(12f, 12f, android.graphics.Shader.TileMode.DECAL)
             val matrix = android.graphics.ColorMatrix(floatArrayOf(
                 1f, 0f, 0f, 0f, 0f,
                 0f, 1f, 0f, 0f, 0f,
                 0f, 0f, 1f, 0f, 0f,
-                0f, 0f, 0f, 50f, -5000f
+                0f, 0f, 0f, 45f, -4500f
             ))
             renderEffect = android.graphics.RenderEffect.createColorFilterEffect(android.graphics.ColorMatrixColorFilter(matrix), blur).asComposeRenderEffect()
+            clip = false
         }
     } else Modifier
 
@@ -422,72 +417,160 @@ fun SettingsScreen(
 
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { translationX = parallaxX }) {
                 val bgScrollState = when (swipeBgMenu) {
-                    "General" -> generalListState
-                    "Appearance" -> appearanceListState
-                    "DebugMenu" -> debugListState
-                    else -> mainListState
+                    "General" -> generalListState; "Appearance" -> appearanceListState; "DebugMenu" -> debugListState; else -> mainListState
                 }
-                
+
                 Box(modifier = Modifier.fillMaxSize().glassRoot(internalBgGlassState)) {
                     MenuList(swipeBgMenu!!, bgScrollState, scrollable = false)
                 }
 
                 val bgIsMain = swipeBgMenu == "Main"
-                val bgHeaderHeight = if (bgIsMain) 150f else 210f
                 val bgScrollOffset = if (bgScrollState.firstVisibleItemIndex == 0) bgScrollState.firstVisibleItemScrollOffset.toFloat() else 150f
                 val bgHeaderProgress = (bgScrollOffset / 150f).coerceIn(0f, 1f)
-                
-                val bgMenuIcon = when (swipeBgMenu) { "General" -> Icons.Outlined.Settings; "Appearance" -> Icons.Outlined.Palette; "DebugMenu" -> Icons.Outlined.BugReport; else -> null }
-                val bgIconX = (48f * bgHeaderProgress).dp
-                val bgIconY = (52f * (1f - bgHeaderProgress)).dp
-                val bgTitleX = (if (bgIsMain) 0f else 100f * bgHeaderProgress).dp
-                val bgTitleY = (if (bgIsMain) (44f * (1f - bgHeaderProgress)) else (96f * (1f - bgHeaderProgress) + 4f * bgHeaderProgress)).dp
-                val bgTitleScale = 1f - 0.4f * bgHeaderProgress
 
-                Box(modifier = Modifier.fillMaxWidth().height(bgHeaderHeight.dp).clipToBounds()) {
-                    if (settings.blur) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            GlassPillBackground(state = internalBgGlassState, blurRadius = 25f, modifier = Modifier.fillMaxWidth().height((bgHeaderHeight * 0.2f).dp))
-                            GlassPillBackground(state = internalBgGlassState, blurRadius = 10f, modifier = Modifier.fillMaxWidth().height((bgHeaderHeight * 0.15f).dp))
-                            GlassPillBackground(state = internalBgGlassState, blurRadius = 5f, modifier = Modifier.fillMaxWidth().height((bgHeaderHeight * 0.1f).dp))
+                val bgPhysicsProgress by animateFloatAsState(
+                    targetValue = bgHeaderProgress,
+                    animationSpec = spring(dampingRatio = 0.7f, stiffness = 200f), label = "bg_liquid"
+                )
+
+                val bgExpandedHeight = if (bgIsMain) 160f else 240f
+                val bgCollapsedHeight = 120f
+                val bgCurrentHeight = bgExpandedHeight * (1f - bgPhysicsProgress) + bgCollapsedHeight * bgPhysicsProgress
+
+                val bgTitleScale = 1f - 0.4f * bgPhysicsProgress
+                val bgTitleX = (if (bgIsMain) 0f else 88f * bgPhysicsProgress).dp
+                // FIX: same pill-alignment math for bg header
+                val bgTitleY = (
+                        if (bgIsMain) {
+                            (56f * (1f - bgPhysicsProgress) + 7f * bgPhysicsProgress)
+                        } else {
+                            (100f * (1f - bgPhysicsProgress) + 7f * bgPhysicsProgress)
                         }
+                        ).dp
+
+                val bgIconX = (48f * bgPhysicsProgress).dp
+                val bgIconY = (56f * (1f - bgPhysicsProgress) + 0f * bgPhysicsProgress).dp
+                // FIX: 0.7x bigger at unscrolled for bg too
+                val bgIconScale = 2.7f - 1.7f * bgPhysicsProgress
+
+                Box(modifier = Modifier.fillMaxWidth().height(bgCurrentHeight.dp)) {
+                    Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                        if (settings.blur) {
+                            Box(modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.99f)) {
+                                Column(modifier = Modifier.fillMaxSize()) {
+                                    GlassPillBackground(state = internalBgGlassState, blurRadius = 25f, modifier = Modifier.fillMaxWidth().height((bgCurrentHeight * 0.3f).dp))
+                                    GlassPillBackground(state = internalBgGlassState, blurRadius = 10f, modifier = Modifier.fillMaxWidth().height((bgCurrentHeight * 0.35f).dp))
+                                    GlassPillBackground(state = internalBgGlassState, blurRadius = 5f, modifier = Modifier.fillMaxWidth().height((bgCurrentHeight * 0.35f).dp))
+                                }
+                            }
+                        }
+                        Box(modifier = Modifier.fillMaxSize().background(
+                            Brush.verticalGradient(
+                                0f to bgColor.copy(alpha = if (settings.blur) 0.95f else 0.95f),
+                                0.5f to bgColor.copy(alpha = if (settings.blur) 0.90f else 0.90f),
+                                0.8f to bgColor.copy(alpha = if (settings.blur) 0.40f else 0.8f),
+                                1f to Color.Transparent
+                            )
+                        ))
                     }
-                    Box(modifier = Modifier.fillMaxSize().background(
-                        androidx.compose.ui.graphics.Brush.verticalGradient(
-                            0f to bgColor.copy(alpha = if (settings.blur) 0.95f else 0.95f),
-                            0.15f to bgColor.copy(alpha = if (settings.blur) 0.90f else 0.90f),
-                            0.4f to bgColor.copy(alpha = if (settings.blur) 0.40f else 0.8f),
-                            0.6f to Color.Transparent
-                        )
-                    ))
-                    Box(modifier = Modifier.matchParentSize().padding(top = 56.dp, start = 24.dp, end = 24.dp)) {
-                        
+
+                    Box(modifier = Modifier.matchParentSize().padding(top = 64.dp, start = 24.dp, end = 24.dp)) {
+                        val bgMenuIcon = when (swipeBgMenu) {
+                            "General" -> Icons.Outlined.Settings; "Appearance" -> Icons.Outlined.Palette; "DebugMenu" -> Icons.Outlined.BugReport; else -> null
+                        }
+
+                        // BG: metaball blob — Canvas fills padded box, direct coordinate math
                         androidx.compose.animation.AnimatedVisibility(
                             visible = swipeBgMenu != "Main",
                             enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                            exit = fadeOut() + scaleOut(targetScale = 0.8f)
+                            exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                            modifier = Modifier.align(Alignment.TopStart)
                         ) {
-                            Box(modifier = Modifier.fillMaxSize()) {
-                                // Metaball Layer
-                                Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.15f }.then(metaballModifier)) {
-                                    Box(modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.onBackground, CircleShape))
-                                    if (bgMenuIcon != null) {
-                                        Box(modifier = Modifier.graphicsLayer { translationX = bgIconX.toPx(); translationY = bgIconY.toPx(); alpha = bgHeaderProgress }.size(36.dp).background(MaterialTheme.colorScheme.onBackground, CircleShape))
-                                    }
-                                }
-
-                                // Icons overlay
-                                Box(modifier = Modifier.size(36.dp), contentAlignment = Alignment.Center) {
-                                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(24.dp))
-                                }
-
-                                Box(modifier = Modifier.graphicsLayer { translationX = 42.dp.toPx(); translationY = 8.dp.toPx(); alpha = ((bgHeaderProgress - 0.7f) * 3.33f).coerceIn(0f, 1f) }.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)))
-                                
+                            val blobColor = MaterialTheme.colorScheme.onBackground
+                            Canvas(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .graphicsLayer { alpha = 0.15f }
+                                    .then(metaballModifier)
+                            ) {
+                                val halfBox = 18.dp.toPx()
+                                val radius  = 18.dp.toPx()
+                                val backCX = halfBox
+                                val backCY = halfBox
+                                drawCircle(color = blobColor, radius = radius, center = Offset(backCX, backCY))
                                 if (bgMenuIcon != null) {
-                                    Box(modifier = Modifier.graphicsLayer { translationX = bgIconX.toPx(); translationY = bgIconY.toPx() }.size(36.dp), contentAlignment = Alignment.Center) {
-                                        Icon(bgMenuIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(20.dp))
+                                    val icCX = bgIconX.toPx() + halfBox
+                                    val icCY = bgIconY.toPx() + halfBox
+                                    val dynamicRadius = radius * bgPhysicsProgress.coerceIn(0f, 1f)
+                                    drawCircle(color = blobColor, radius = dynamicRadius, center = Offset(icCX, icCY))
+                                    val bridgeStroke = 36.dp.toPx() * bgPhysicsProgress
+                                    if (bridgeStroke > 0f && dynamicRadius > 0f) {
+                                        drawLine(
+                                            color = blobColor,
+                                            start = Offset(backCX, backCY),
+                                            end = Offset(icCX, icCY),
+                                            strokeWidth = bridgeStroke,
+                                            cap = StrokeCap.Round
+                                        )
                                     }
                                 }
+                            }
+                        }
+
+                        // BG: Separator line
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = swipeBgMenu != "Main",
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            modifier = Modifier.align(Alignment.TopStart)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        translationX = 40.dp.toPx()
+                                        translationY = 10.dp.toPx()
+                                        alpha = ((bgPhysicsProgress - 0.7f) * 3.33f).coerceIn(0f, 1f)
+                                    }
+                                    .width(2.dp).height(16.dp)
+                                    .clip(RoundedCornerShape(50))
+                                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
+                            )
+                        }
+
+                        // BG: Floating menu icon
+                        if (bgMenuIcon != null) {
+                            androidx.compose.animation.AnimatedVisibility(
+                                visible = swipeBgMenu != "Main",
+                                enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                                exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                                modifier = Modifier.align(Alignment.TopStart)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .graphicsLayer {
+                                            translationX = bgIconX.toPx()
+                                            translationY = bgIconY.toPx()
+                                        }
+                                        .size(36.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(bgMenuIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(20.dp).graphicsLayer { scaleX = bgIconScale; scaleY = bgIconScale })
+                                }
+                            }
+                        }
+
+                        // BG: Back arrow — fixed at (0,0), visual only (no click needed on bg layer)
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = swipeBgMenu != "Main",
+                            enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                            exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                            modifier = Modifier.align(Alignment.TopStart)
+                        ) {
+                            Box(
+                                modifier = Modifier.size(36.dp).clip(CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(24.dp))
                             }
                         }
 
@@ -567,9 +650,9 @@ fun SettingsScreen(
                     transitionSpec = {
                         when (navType) {
                             SubNavType.Push -> (slideInHorizontally(spring(dampingRatio = 0.95f, stiffness = 350f)) { it } + fadeIn(tween(250))) togetherWith
-                                              (slideOutHorizontally(spring(dampingRatio = 0.95f, stiffness = 350f)) { -it / 3 } + fadeOut(tween(250)))
+                                    (slideOutHorizontally(spring(dampingRatio = 0.95f, stiffness = 350f)) { -it / 3 } + fadeOut(tween(250)))
                             SubNavType.Pop  -> (slideInHorizontally(spring(dampingRatio = 0.95f, stiffness = 350f)) { -it / 3 } + fadeIn(tween(250))) togetherWith
-                                              (slideOutHorizontally(spring(dampingRatio = 0.95f, stiffness = 350f)) { it } + fadeOut(tween(250)))
+                                    (slideOutHorizontally(spring(dampingRatio = 0.95f, stiffness = 350f)) { it } + fadeOut(tween(250)))
                             SubNavType.Instant -> EnterTransition.None togetherWith ExitTransition.None
                         }
                     }
@@ -578,79 +661,166 @@ fun SettingsScreen(
                     MenuList(menuState, state, scrollable = true)
                 }
             }
-            
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (isMain) 150.dp else 210.dp)
-                    .clipToBounds()
-            ) {
-                if (settings.blur) {
-                    Box(modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.99f)) {
-                        Column(modifier = Modifier.fillMaxSize()) {
-                            val h = if (isMain) 150f else 210f
-                            GlassPillBackground(state = internalGlassState, blurRadius = 25f, modifier = Modifier.fillMaxWidth().height((h * 0.2f).dp))
-                            GlassPillBackground(state = internalGlassState, blurRadius = 10f, modifier = Modifier.fillMaxWidth().height((h * 0.15f).dp))
-                            GlassPillBackground(state = internalGlassState, blurRadius = 5f, modifier = Modifier.fillMaxWidth().height((h * 0.1f).dp))
+
+            val expandedHeight = if (isMain) 160f else 240f
+            val collapsedHeight = 120f
+            val currentHeight = expandedHeight * (1f - physicsProgress) + collapsedHeight * physicsProgress
+
+            Box(modifier = Modifier.fillMaxWidth().height(currentHeight.dp)) {
+                Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+                    if (settings.blur) {
+                        Box(modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.99f)) {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                GlassPillBackground(state = internalGlassState, blurRadius = 25f, modifier = Modifier.fillMaxWidth().height((currentHeight * 0.3f).dp))
+                                GlassPillBackground(state = internalGlassState, blurRadius = 10f, modifier = Modifier.fillMaxWidth().height((currentHeight * 0.35f).dp))
+                                GlassPillBackground(state = internalGlassState, blurRadius = 5f, modifier = Modifier.fillMaxWidth().height((currentHeight * 0.35f).dp))
+                            }
                         }
                     }
+                    Box(modifier = Modifier.fillMaxSize().background(
+                        Brush.verticalGradient(
+                            0f to bgColor.copy(alpha = if (settings.blur) 0.95f else 0.95f),
+                            0.5f to bgColor.copy(alpha = if (settings.blur) 0.90f else 0.90f),
+                            0.8f to bgColor.copy(alpha = if (settings.blur) 0.40f else 0.8f),
+                            1f to Color.Transparent
+                        )
+                    ))
                 }
-                Box(modifier = Modifier.fillMaxSize().background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        0f to bgColor.copy(alpha = if (settings.blur) 0.95f else 0.95f),
-                        0.15f to bgColor.copy(alpha = if (settings.blur) 0.90f else 0.90f),
-                        0.4f to bgColor.copy(alpha = if (settings.blur) 0.40f else 0.8f),
-                        0.6f to Color.Transparent
-                    )
-                ))
 
-                Box(modifier = Modifier.matchParentSize().padding(top = 56.dp, start = 24.dp, end = 24.dp)) {
-                    
+                Box(modifier = Modifier.matchParentSize().padding(top = 64.dp, start = 24.dp, end = 24.dp)) {
                     val menuIcon = when (currentMenu) {
-                        "General" -> Icons.Outlined.Settings
-                        "Appearance" -> Icons.Outlined.Palette
-                        "DebugMenu" -> Icons.Outlined.BugReport
-                        else -> null
+                        "General" -> Icons.Outlined.Settings; "Appearance" -> Icons.Outlined.Palette; "DebugMenu" -> Icons.Outlined.BugReport; else -> null
                     }
 
+                    // ── Metaball blob layer ───────────────────────────────────────────────
+                    // Canvas fills the entire padded Box so all draw coordinates are in
+                    // padded-box space — no offset tricks, no wrapContentSize shifting.
+                    // Arrow box is 36dp at (0,0)       → center = (18dp, 18dp)
+                    // Icon  box is 36dp at (iconX,iconY) → center = (iconX+18dp, iconY+18dp)
                     androidx.compose.animation.AnimatedVisibility(
                         visible = currentMenu != "Main",
                         enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                        exit = fadeOut() + scaleOut(targetScale = 0.8f)
+                        exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                        modifier = Modifier.align(Alignment.TopStart)
                     ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            // Metaball Liquid Layer
-                            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = 0.15f }.then(metaballModifier)) {
-                                Box(modifier = Modifier.size(36.dp).background(MaterialTheme.colorScheme.onBackground, CircleShape))
-                                if (menuIcon != null) {
-                                    Box(modifier = Modifier.graphicsLayer { translationX = iconX.toPx(); translationY = iconY.toPx(); alpha = headerProgress }.size(36.dp).background(MaterialTheme.colorScheme.onBackground, CircleShape))
-                                }
-                            }
+                        val blobColor = MaterialTheme.colorScheme.onBackground
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .graphicsLayer { alpha = 0.15f }
+                                .then(metaballModifier)
+                        ) {
+                            val halfBox = 18.dp.toPx()   // center offset of a 36dp box
+                            val radius  = 18.dp.toPx()
 
-                            // Foreground Icons Overlay
-                            Box(modifier = Modifier.size(36.dp).clip(CircleShape).clickable { handleBack(SubNavType.Pop) }, contentAlignment = Alignment.Center) {
-                                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(24.dp))
-                            }
+                            // Back-arrow circle: always at (18dp, 18dp) padded-box coords
+                            val backCX = halfBox
+                            val backCY = halfBox
+                            drawCircle(color = blobColor, radius = radius, center = Offset(backCX, backCY))
 
-                            Box(modifier = Modifier.graphicsLayer { translationX = 42.dp.toPx(); translationY = 8.dp.toPx(); alpha = ((headerProgress - 0.7f) * 3.33f).coerceIn(0f, 1f) }.width(1.dp).height(20.dp).background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f)))
-                            
                             if (menuIcon != null) {
-                                Box(modifier = Modifier.graphicsLayer { translationX = iconX.toPx(); translationY = iconY.toPx() }.size(36.dp), contentAlignment = Alignment.Center) {
-                                    Icon(menuIcon, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(20.dp))
+                                // Floating-icon circle: moves with iconX / iconY
+                                val icCX = iconX.toPx() + halfBox
+                                val icCY = iconY.toPx() + halfBox
+                                val dynamicRadius = radius * physicsProgress.coerceIn(0f, 1f)
+                                drawCircle(color = blobColor, radius = dynamicRadius, center = Offset(icCX, icCY))
+                                val bridgeStroke = 36.dp.toPx() * physicsProgress
+                                if (bridgeStroke > 0f && dynamicRadius > 0f) {
+                                    drawLine(
+                                        color = blobColor,
+                                        start = Offset(backCX, backCY),
+                                        end = Offset(icCX, icCY),
+                                        strokeWidth = bridgeStroke,
+                                        cap = StrokeCap.Round
+                                    )
                                 }
                             }
                         }
                     }
 
+                    // ── Separator line (fades in when scrolled) ───────────────────────────
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = currentMenu != "Main",
+                        enter = fadeIn(),
+                        exit = fadeOut(),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    // sits just to the right of the 36dp arrow box, vertically centred
+                                    translationX = 40.dp.toPx()
+                                    translationY = 10.dp.toPx()
+                                    alpha = ((physicsProgress - 0.7f) * 3.33f).coerceIn(0f, 1f)
+                                }
+                                .width(2.dp).height(16.dp)
+                                .clip(RoundedCornerShape(50))
+                                .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
+                        )
+                    }
+
+                    // ── Floating menu icon (animates to pill position when scrolled) ──────
+                    if (menuIcon != null) {
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = currentMenu != "Main",
+                            enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                            exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                            modifier = Modifier.align(Alignment.TopStart)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .graphicsLayer {
+                                        translationX = iconX.toPx()
+                                        translationY = iconY.toPx()
+                                    }
+                                    .size(36.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    menuIcon,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onBackground,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .graphicsLayer { scaleX = iconScale; scaleY = iconScale }
+                                )
+                            }
+                        }
+                    }
+
+                    // ── Back arrow — completely fixed at (0,0), never moves ───────────────
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = currentMenu != "Main",
+                        enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                        exit = fadeOut() + scaleOut(targetScale = 0.8f),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .clickable { handleBack(SubNavType.Pop) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onBackground,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+
+                    // ── Title ─────────────────────────────────────────────────────────────
                     key(navType) {
                         AnimatedContent(
                             targetState = displayedTitle,
                             label = "TitleTransition",
                             modifier = Modifier.graphicsLayer {
-                                translationX  = titleX.toPx()
-                                translationY  = titleY.toPx()
-                                scaleX        = titleScale
-                                scaleY        = titleScale
+                                translationX    = titleX.toPx()
+                                translationY    = titleY.toPx()
+                                scaleX          = titleScale
+                                scaleY          = titleScale
                                 transformOrigin = TransformOrigin(0f, 0f)
                             },
                             transitionSpec = {
@@ -658,11 +828,16 @@ fun SettingsScreen(
                                     EnterTransition.None togetherWith ExitTransition.None
                                 } else {
                                     (slideInVertically(spring(stiffness = 300f)) { it } + fadeIn(tween(250))) togetherWith
-                                    (slideOutVertically(spring(stiffness = 300f)) { -it } + fadeOut(tween(250)))
+                                            (slideOutVertically(spring(stiffness = 300f)) { -it } + fadeOut(tween(250)))
                                 }
                             }
                         ) { title ->
-                            Text(text = title, color = MaterialTheme.colorScheme.onBackground, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = title,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                fontSize = 40.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -678,7 +853,7 @@ fun SettingsGroup(content: @Composable ColumnScope.() -> Unit) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(vertical = 4.dp) 
+            .padding(vertical = 4.dp)
     ) {
         content()
     }
@@ -690,7 +865,7 @@ fun SettingsItemOverlay(title: String, subtitle: String, icon: ImageVector, tint
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 12.dp), 
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(modifier = Modifier.size(36.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
@@ -777,9 +952,9 @@ fun HeaderTypeSelectionContent(settings: AppSettings, onSelect: (HeaderType) -> 
                 Spacer(modifier = Modifier.width(16.dp))
                 Text("Headers type", color = MaterialTheme.colorScheme.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
             }
-            
+
             Spacer(modifier = Modifier.height(32.dp))
-            
+
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 HeaderGridCard("Location", isSelected = settings.headerType == HeaderType.Standard, Modifier.weight(1f)) { onSelect(HeaderType.Standard) }
                 HeaderGridCard("weather type", isSelected = settings.headerType == HeaderType.Greeting, Modifier.weight(1f)) { onSelect(HeaderType.Greeting) }
@@ -795,16 +970,16 @@ fun HeaderTypeSelectionContent(settings: AppSettings, onSelect: (HeaderType) -> 
 
 @Composable
 fun OverlayContent(
-    overlayType: OverlayType, 
-    settings: AppSettings, 
+    overlayType: OverlayType,
+    settings: AppSettings,
     currentWeather: WeatherType = WeatherType.Clear,
-    onUpdateSettings: (AppSettings) -> Unit, 
+    onUpdateSettings: (AppSettings) -> Unit,
     onOpenNested: (NestedOverlay) -> Unit,
     onWeatherSelect: (WeatherType) -> Unit = {},
     onTestOdometer: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val context = LocalContext.current
-    
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -829,9 +1004,9 @@ fun OverlayContent(
                     }
                     Spacer(modifier = Modifier.height(16.dp))
                     ThemeCard("Auto by system", Icons.Outlined.BrightnessAuto, settings.theme == AppTheme.Auto) { onUpdateSettings(settings.copy(theme = AppTheme.Auto)) }
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -870,9 +1045,9 @@ fun OverlayContent(
                         Spacer(modifier = Modifier.width(16.dp))
                         Text("Front page customisation", color = MaterialTheme.colorScheme.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(48.dp))
-                    
+
                     val typeName = when(settings.headerType) {
                         HeaderType.Standard -> "Location"
                         HeaderType.Greeting -> "weather type"
@@ -890,9 +1065,9 @@ fun OverlayContent(
                     ) {
                         Text(typeName, color = MaterialTheme.colorScheme.onSurface, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(48.dp))
-                    
+
                     Row(verticalAlignment = Alignment.Bottom) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Box(modifier = Modifier.width(60.dp).height(12.dp).background(MaterialTheme.colorScheme.onSurface))
@@ -901,16 +1076,16 @@ fun OverlayContent(
                         Spacer(modifier = Modifier.width(24.dp))
                         Box(modifier = Modifier.size(48.dp).border(8.dp, MaterialTheme.colorScheme.onSurface, CircleShape))
                     }
-                    
+
                     Spacer(modifier = Modifier.height(48.dp))
-                    
+
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Box(modifier = Modifier.width(30.dp).height(4.dp).background(MaterialTheme.colorScheme.onSurface.copy(0.5f)))
                         Box(modifier = Modifier.width(100.dp).height(4.dp).background(MaterialTheme.colorScheme.onSurface.copy(0.5f)))
                     }
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     Box(modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.onSurface.copy(0.2f), RoundedCornerShape(20.dp)).padding(16.dp)) {
                         Column {
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -952,7 +1127,7 @@ fun OverlayContent(
                     Text("Permission", color = MaterialTheme.colorScheme.onSurface, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Text("The app need these to work", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(24.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -961,21 +1136,21 @@ fun OverlayContent(
                         Spacer(modifier = Modifier.width(16.dp))
                         Text("permission are granted.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     }
-                    
+
                     Spacer(modifier = Modifier.height(24.dp))
-                    
+
                     val reqPerm = {
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                         intent.data = Uri.fromParts("package", context.packageName, null)
                         context.startActivity(intent)
                     }
-                    
+
                     SettingsItemOverlay("Location", "", Icons.Outlined.LocationOn) { reqPerm() }
                     SettingsItemOverlay("background services", "", Icons.Outlined.SettingsSuggest) { reqPerm() }
                     SettingsItemOverlay("Battery Optimisation", "", Icons.Outlined.BatteryAlert) { reqPerm() }
                     SettingsItemOverlay("Networks", "", Icons.Outlined.Wifi) { reqPerm() }
                     SettingsItemOverlay("Notifications", "", Icons.Outlined.Notifications) { reqPerm() }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
                     Text("We wont collect and store ANY data you given to us. the app only collect location data ( if permitted ) and ip address to display accurate location of the current weather. we will never collect and STORE any data.", color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f), fontSize = 11.sp, lineHeight = 14.sp)
                 }
@@ -987,10 +1162,10 @@ fun OverlayContent(
                         ) {
                             Icon(Icons.Outlined.Cloud, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.size(50.dp))
                         }
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
                         Text("Weatherify", color = MaterialTheme.colorScheme.onSurface, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                        
+
                         Spacer(modifier = Modifier.height(32.dp))
 
                         Box(
@@ -1007,7 +1182,7 @@ fun OverlayContent(
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                             Box(modifier = Modifier.weight(1f).height(180.dp).clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(20.dp)) {
                                 Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.SpaceBetween) {
@@ -1055,18 +1230,18 @@ fun OverlayContent(
                     Text("Weather Provider", color = MaterialTheme.colorScheme.onSurface, fontSize = 32.sp, fontWeight = FontWeight.Bold)
                     Text("Select the weather provider for the app.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 14.sp)
                     Spacer(modifier = Modifier.height(32.dp))
-                    
-                    ProviderCard("OpenWeather", "Global coverage", Icons.Outlined.Language, settings.provider == "OpenWeather") { 
+
+                    ProviderCard("OpenWeather", "Global coverage", Icons.Outlined.Language, settings.provider == "OpenWeather") {
                         onUpdateSettings(settings.copy(provider = "OpenWeather"))
                         WeatherBackend.setProvider("OpenWeather")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    ProviderCard("BMKG", "Indonesia only", Icons.Outlined.Map, settings.provider == "BMKG") { 
+                    ProviderCard("BMKG", "Indonesia only", Icons.Outlined.Map, settings.provider == "BMKG") {
                         onUpdateSettings(settings.copy(provider = "BMKG"))
                         WeatherBackend.setProvider("BMKG")
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    ProviderCard("Google Weather API", "Global coverage", Icons.Outlined.CloudCircle, settings.provider == "Google") { 
+                    ProviderCard("Google Weather API", "Global coverage", Icons.Outlined.CloudCircle, settings.provider == "Google") {
                         onUpdateSettings(settings.copy(provider = "Google"))
                         WeatherBackend.setProvider("Google")
                     }
@@ -1084,7 +1259,7 @@ fun RefreshCycleOverlayContent(
     onUpdate: (AppSettings) -> Unit
 ) {
     val minuteOptions = remember { (0..59).map { "${it}m" } }
-    
+
     var selectedMinute by remember { mutableIntStateOf(settings.refreshIntervalSec / 60) }
     var selectedSecond by remember { mutableIntStateOf(settings.refreshIntervalSec % 60) }
 
@@ -1114,14 +1289,14 @@ fun RefreshCycleOverlayContent(
         Icon(Icons.AutoMirrored.Outlined.RotateRight, contentDescription = null, tint = Color.White, modifier = Modifier.size(48.dp).padding(bottom = 12.dp))
         Text("Refresh Cycle", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Text("Set how often the weather data refreshes in the background. Min 30s.", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp)
-        
+
         Spacer(modifier = Modifier.height(32.dp))
 
         Row(modifier = Modifier.fillMaxWidth()) {
             Text("MINUTES", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text("SECONDS", modifier = Modifier.weight(1f), textAlign = TextAlign.Center, color = Color.White.copy(alpha = 0.5f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
 
         Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(24.dp))) {
@@ -1134,7 +1309,7 @@ fun RefreshCycleOverlayContent(
                 Box(modifier = Modifier.width(1.dp).fillMaxHeight(0.5f).align(Alignment.CenterVertically).background(Color.White.copy(alpha = 0.1f)))
                 Box(modifier = Modifier.weight(1f)) {
                     val displayIndex = if (selectedMinute == 0) (selectedSecond - 30).coerceAtLeast(0) else selectedSecond
-                    WheelPicker(options = secondOptions, selectedIndex = displayIndex, onIndexSelected = { 
+                    WheelPicker(options = secondOptions, selectedIndex = displayIndex, onIndexSelected = {
                         selectedSecond = if (selectedMinute == 0) it + 30 else it
                     })
                 }
