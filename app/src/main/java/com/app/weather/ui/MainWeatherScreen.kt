@@ -1,16 +1,15 @@
 package com.app.weather.ui
 
-import android.annotation.SuppressLint
 import android.graphics.RuntimeShader
 import android.os.Build
-import androidx.compose.ui.draw.clipToBounds
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.rememberScrollableState
@@ -32,25 +31,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import org.intellij.lang.annotations.Language
 import kotlin.math.*
+import com.app.weather.ui.widgets.large.*
+import com.app.weather.ui.widgets.small.*
 
 // ─── Shaders ─────────────────────────────────────────────────────────────────
 
@@ -162,71 +159,101 @@ private const val CLOUD_SHADER = """
     }
 """
 
-@Composable
-private fun WidgetLabel(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, contentColor: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(imageVector = icon, contentDescription = null, tint = contentColor.copy(alpha = 0.7f), modifier = Modifier.size(12.dp))
-        Spacer(Modifier.width(4.dp))
-        Text(text = label.uppercase(), color = contentColor.copy(alpha = 0.7f), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
-    }
-}
 
-@Composable
-private fun FullWidgetBox(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, widgetBg: Color, contentColor: Color, content: @Composable ColumnScope.() -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-        Column {
-            WidgetLabel(icon, label, contentColor)
-            Spacer(Modifier.height(12.dp))
-            content()
-        }
-    }
-}
-
-@SuppressLint("SetJavaScriptEnabled")
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun MainWeatherScreen(
-    data: WeatherData, 
-    settings: AppSettings, 
+    data: WeatherData,
+    settings: AppSettings,
     onRefresh: () -> Unit = {},
     testOdometerFrom: Int? = null,
     testOdometerTarget: Int? = null,
     testOdometerTrigger: Int = 0
 ) {
     val scrollOffset = remember { mutableFloatStateOf(0f) }
-    val maxScroll = 6000f
+    val maxScroll = 10000f
     val density = LocalDensity.current
     val screenWidthPx = with(density) { LocalConfiguration.current.screenWidthDp.dp.toPx() }
-    
+
     var isRefreshing by remember { mutableStateOf(false) }
     var isPullingAllowed by remember { mutableStateOf(false) }
 
-    val pullThreshold = -80f
-    val maxOverscroll = -120f
+    val pullThreshold = -120f
+    val maxOverscroll = -160f
+
+    var lastScrollDirection by remember { mutableFloatStateOf(0f) }
 
     val scrollableState = rememberScrollableState { delta ->
+        lastScrollDirection = delta
         if (isRefreshing) return@rememberScrollableState delta
-        
-        val friction = 0.55f 
+
+        val friction = 0.55f
         val adjustedDelta = delta * friction
 
         val prevOffset = scrollOffset.floatValue
         val newOffset = scrollOffset.floatValue - adjustedDelta
-        
-        if (prevOffset > 0f && newOffset < 0f && !isPullingAllowed) {
-            scrollOffset.floatValue = 0f
-            return@rememberScrollableState delta
+
+        if (newOffset > 0f) {
+            isPullingAllowed = false
         }
-        
+
+        if (newOffset < 0f) {
+            if (prevOffset > 0f || (prevOffset == 0f && !isPullingAllowed)) {
+                scrollOffset.floatValue = 0f
+                return@rememberScrollableState (prevOffset - 0f) / friction
+            }
+        }
+
         scrollOffset.floatValue = newOffset.coerceIn(maxOverscroll, maxScroll)
-        delta 
+        delta
     }
 
     LaunchedEffect(scrollableState.isScrollInProgress) {
-        if (scrollableState.isScrollInProgress) isPullingAllowed = scrollOffset.floatValue <= 1f
-        else {
+        if (scrollableState.isScrollInProgress) {
+            isPullingAllowed = scrollOffset.floatValue <= 1f
+        } else {
             if (scrollOffset.floatValue < 0f && !isRefreshing) {
                 if (scrollOffset.floatValue <= pullThreshold) isRefreshing = true
+            }
+            if (scrollOffset.floatValue < 0f) {
+                launch {
+                    animate(
+                        initialValue = scrollOffset.floatValue,
+                        targetValue = 0f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
+                    ) { value, _ ->
+                        scrollOffset.floatValue = value
+                    }
+                }
+            }
+
+            val offset = scrollOffset.floatValue
+            if (offset > 0f && offset < 800f) {
+                launch {
+                    val target = if (lastScrollDirection < 0) 800f else 0f
+                    animate(
+                        initialValue = scrollOffset.floatValue,
+                        targetValue = target,
+                        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow)
+                    ) { value, _ ->
+                        scrollOffset.floatValue = value
+                    }
+                }
+            }
+
+            if (offset > 0f && offset < 800f) {
+                launch {
+                    delay(5000)
+                    if (!scrollableState.isScrollInProgress && scrollOffset.floatValue > 0f && scrollOffset.floatValue < 800f) {
+                        animate(
+                            initialValue = scrollOffset.floatValue,
+                            targetValue = 0f,
+                            animationSpec = tween(1500, easing = FastOutSlowInEasing)
+                        ) { value, _ ->
+                            scrollOffset.floatValue = value
+                        }
+                    }
+                }
             }
         }
     }
@@ -234,14 +261,6 @@ fun MainWeatherScreen(
     LaunchedEffect(isRefreshing) {
         if (isRefreshing) {
             onRefresh()
-        } else if (scrollOffset.floatValue < 0f) {
-            animate(
-                initialValue = scrollOffset.floatValue,
-                targetValue = 0f,
-                animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium)
-            ) { value, _ ->
-                scrollOffset.floatValue = value
-            }
         }
     }
 
@@ -252,37 +271,35 @@ fun MainWeatherScreen(
     val smoothProgress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
         snapshotFlow { (scrollOffset.floatValue / 800f).coerceIn(0f, 1f) }
-            .collect { target -> 
-                launch { 
+            .collect { target ->
+                launch {
                     if (settings.animation) {
                         smoothProgress.animateTo(
-                            target, 
-                            spring(dampingRatio = 0.95f, stiffness = 350f)
+                            target,
+                            spring(dampingRatio = 0.72f, stiffness = 180f)
                         )
                     } else {
                         smoothProgress.snapTo(target)
                     }
-                } 
+                }
             }
     }
 
-    // Fixed time buckets for a more accurate day/night cycle
     val visualState = if (settings.visualStateOverride != VisualState.Automatic) settings.visualStateOverride else {
         val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-        when (hour) { 
+        when (hour) {
             in 5..6 -> VisualState.Sunrise
-            in 7..15 -> VisualState.Day 
+            in 7..15 -> VisualState.Day
             in 16..17 -> VisualState.Afternoon
-            18 -> VisualState.Sunset // Ensure 6 PM translates correctly to Sunset/Dusk
-            in 19..20 -> VisualState.Evening 
-            else -> VisualState.Night 
+            18 -> VisualState.Sunset
+            in 19..20 -> VisualState.Evening
+            else -> VisualState.Night
         }
     }
 
-    // Force all text to remain white for realism and readability against atmospheric skies
     val contentColor = Color.White
     val secondaryContentColor = contentColor.copy(alpha = 0.7f)
-    val widgetBg = Color.White.copy(alpha = 0.12f) // Universal translucent glass
+    val widgetBg = Color.White.copy(alpha = 0.12f)
 
     val headerText = when (settings.headerType) { HeaderType.Greeting -> data.type.title; HeaderType.Standard -> data.location; HeaderType.Sunrise -> if (data.sunriseEpoch != null) "Sunrise at ${epochToTimeStr(data.sunriseEpoch)}" else "Sunrise --"; HeaderType.FeelsLike -> "Feels like ${data.feelsLike ?: "__"}°"; HeaderType.Disabled -> "" }
 
@@ -293,7 +310,6 @@ fun MainWeatherScreen(
     val skyTopColor by animateColorAsState(getSkyColors(data.type, visualState).first, animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
     val skyBottomColor by animateColorAsState(getSkyColors(data.type, visualState).second, animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
     val cloudColor by animateColorAsState(getCloudColor(data.type, visualState), animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
-    
     val cloudDensityMult by animateFloatAsState(when (data.type) { WeatherType.Clear -> 0.0f; WeatherType.Clouds -> 1.0f; WeatherType.Rain, WeatherType.Drizzle -> 1.2f; WeatherType.Thunderstorm -> 1.5f; WeatherType.Mist, WeatherType.Fog, WeatherType.Haze, WeatherType.Smoke, WeatherType.Dust, WeatherType.Sand, WeatherType.Ash -> 1.2f; WeatherType.Snow -> 1.0f; else -> 1.0f }, animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
     val isFogAnim by animateFloatAsState(targetValue = if (data.type in listOf(WeatherType.Mist, WeatherType.Fog, WeatherType.Haze, WeatherType.Smoke)) 1f else 0f, animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
     val windSpeedMult by animateFloatAsState(when (data.type) { WeatherType.Thunderstorm -> 2.5f; WeatherType.Rain -> 1.5f; WeatherType.Clear -> 0.5f; else -> 1.0f }, animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
@@ -309,7 +325,7 @@ fun MainWeatherScreen(
 
     var displayTemp by remember(data.temp) { mutableStateOf(data.temp) }
     var forceSnap by remember { mutableStateOf<Int?>(null) }
-    
+
     LaunchedEffect(testOdometerTrigger) {
         if (testOdometerTrigger > 0) {
             val f = testOdometerFrom ?: -1
@@ -324,68 +340,99 @@ fun MainWeatherScreen(
 
     val internalGlassState = remember { GlassState() }
 
-    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+    Box(modifier = Modifier.fillMaxSize().background(if (settings.vulkan) Color.Transparent else Color.Black)) {
 
         Box(modifier = Modifier
             .fillMaxSize()
             .glassRoot(internalGlassState)
             .scrollable(state = scrollableState, orientation = Orientation.Vertical)
         ) {
-            Box(modifier = Modifier.fillMaxSize().drawWithCache {
-                onDrawBehind {
-                    skyShader.setFloatUniform("iResolutionX", size.width)
-                    skyShader.setFloatUniform("iResolutionY", size.height)
-                    skyShader.setFloatUniform("scrollOffset", scrollOffset.floatValue / size.height)
-                    skyShader.setColorUniform("skyTop", skyTopColor.toArgb())
-                    skyShader.setColorUniform("skyBottom", skyBottomColor.toArgb())
-                    drawRect(brush = ShaderBrush(skyShader))
-                }
-            })
-
-            if (settings.enableClouds) {
+            if (settings.vulkan) {
+                // ─── Experimental Vulkan/Rust Backend ───
+                WeatherEngineView(
+                    modifier = Modifier.fillMaxSize(),
+                    scrollOffset = scrollOffset.floatValue
+                )
+            } else {
+                // ─── Stable AGSL Shader Backend ───
                 Box(modifier = Modifier.fillMaxSize().drawWithCache {
                     onDrawBehind {
-                        cloudBackShader.setFloatUniform("iResolutionX", size.width)
-                        cloudBackShader.setFloatUniform("iResolutionY", size.height)
-                        cloudBackShader.setFloatUniform("iTime", time.floatValue)
-                        cloudBackShader.setFloatUniform("scrollOffset", scrollOffset.floatValue / size.height)
-                        cloudBackShader.setColorUniform("cloudColor", cloudColor.toArgb())
-                        cloudBackShader.setFloatUniform("cloudDensityMult", cloudDensityMult)
-                        cloudBackShader.setFloatUniform("windSpeedMult", windSpeedMult)
-                        cloudBackShader.setFloatUniform("layerSeed", 0f)
-                        cloudBackShader.setFloatUniform("layerAlphaMult", 1f)
-                        cloudBackShader.setFloatUniform("isFog", isFogAnim)
-                        drawRect(brush = ShaderBrush(cloudBackShader))
+                        skyShader.setFloatUniform("iResolutionX", size.width)
+                        skyShader.setFloatUniform("iResolutionY", size.height)
+                        skyShader.setFloatUniform("scrollOffset", scrollOffset.floatValue / size.height)
+                        skyShader.setColorUniform("skyTop", skyTopColor.toArgb())
+                        skyShader.setColorUniform("skyBottom", skyBottomColor.toArgb())
+                        drawRect(brush = ShaderBrush(skyShader))
                     }
                 })
+
+                if (settings.enableClouds) {
+                    Box(modifier = Modifier.fillMaxSize().drawWithCache {
+                        onDrawBehind {
+                            cloudBackShader.setFloatUniform("iResolutionX", size.width)
+                            cloudBackShader.setFloatUniform("iResolutionY", size.height)
+                            cloudBackShader.setFloatUniform("iTime", time.floatValue)
+                            cloudBackShader.setFloatUniform("scrollOffset", scrollOffset.floatValue / size.height)
+                            cloudBackShader.setColorUniform("cloudColor", cloudColor.toArgb())
+                            cloudBackShader.setFloatUniform("cloudDensityMult", cloudDensityMult)
+                            cloudBackShader.setFloatUniform("windSpeedMult", windSpeedMult)
+                            cloudBackShader.setFloatUniform("layerSeed", 0f)
+                            cloudBackShader.setFloatUniform("layerAlphaMult", 1f)
+                            cloudBackShader.setFloatUniform("isFog", isFogAnim)
+                            drawRect(brush = ShaderBrush(cloudBackShader))
+                        }
+                    })
+                }
             }
 
-            val refreshText by remember { derivedStateOf { when { isRefreshing -> "Refreshing..."; scrollOffset.floatValue <= pullThreshold + 5f -> "Release to refresh"; else -> "Pull to refresh" } } }
-            
+            val refreshText by remember { derivedStateOf { when { 
+                isRefreshing -> "Refreshing..."
+                scrollOffset.floatValue <= pullThreshold - 30f -> "please release please >_<"
+                scrollOffset.floatValue <= pullThreshold + 5f -> "Release to refresh"
+                else -> "Pull to refresh" 
+            } } }
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp)
-                    .graphicsLayer { alpha = if (isRefreshing) 1f else (-scrollOffset.floatValue / 60f).coerceIn(0f, 1f) },
+                    .graphicsLayer { 
+                        alpha = if (isRefreshing) 1f else (-scrollOffset.floatValue / 60f).coerceIn(0f, 1f) 
+                    },
                 contentAlignment = Alignment.TopCenter
             ) {
                 val infiniteTransition = rememberInfiniteTransition(label = "")
                 val loadingRotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(1000, easing = LinearEasing)), label = "")
 
-                Row(modifier = Modifier.padding(top = 60.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier
+                        .padding(top = 60.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, 
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = contentColor, modifier = Modifier.size(20.dp).graphicsLayer { rotationZ = if (isRefreshing && settings.animation) loadingRotation else if (isRefreshing) 0f else -scrollOffset.floatValue * 3f })
-                    Text(text = refreshText, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    AnimatedContent(
+                        targetState = refreshText,
+                        transitionSpec = {
+                            fadeIn(tween(400)) togetherWith fadeOut(tween(400))
+                        },
+                        label = "refreshTextAnim"
+                    ) { text ->
+                        Text(text = text, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
 
             Box(modifier = Modifier.fillMaxWidth().height(8000.dp).graphicsLayer {
                 val offset = scrollOffset.floatValue
                 translationY = if (offset < 0f) -offset * 0.4f else 0f
-                
+
                 if (settings.blur) {
-                    val pullBlurAlpha = if (isRefreshing) 1f else ((-offset / 80f) * (1f - (offset / 50f).coerceIn(0f, 1f))).coerceIn(0f, 1f)
-                    val pullBlur = (pullBlurAlpha * 12f).dp.toPx()
-                    if (pullBlur > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlur, pullBlur, android.graphics.Shader.TileMode.CLAMP).asComposeRenderEffect()
+                    val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
+                    if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.CLAMP).asComposeRenderEffect()
                     else renderEffect = null
                 }
             }) {
@@ -405,7 +452,7 @@ fun MainWeatherScreen(
                         val prog = smoothProgress.value
                         translationY = (345f - 220f * prog).dp.toPx()
                         alpha = (1f - prog * 1.5f).coerceIn(0f, 1f)
-                        
+
                         if (settings.blur) {
                             val blurPx = (20f * prog.coerceAtLeast(0f)).dp.toPx()
                             if (blurPx > 0f) {
@@ -416,244 +463,89 @@ fun MainWeatherScreen(
                         }
                     }
                     .padding(horizontal = 32.dp)
-                    .padding(bottom = 32.dp) 
+                    .padding(bottom = 32.dp)
                 ) {
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(text = dynamicQuote, color = contentColor.copy(alpha = 0.8f), fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.fillMaxWidth())
                     Spacer(modifier = Modifier.height(32.dp))
-                    
-                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+
+                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         val infiniteTransition = rememberInfiniteTransition(label = "")
                         val windRotation by infiniteTransition.animateFloat(initialValue = 0f, targetValue = 360f, animationSpec = infiniteRepeatable(animation = tween(2000, easing = LinearEasing), repeatMode = RepeatMode.Restart), label = "")
                         val metrics = listOf(Pair(Icons.Default.FilterDrama, data.aqi), Pair(Icons.Default.NorthEast, data.wind), Pair(Icons.Default.Visibility, data.visibility), Pair(Icons.Default.WaterDrop, data.humidity))
                         metrics.forEach { (icon, label) ->
-                            Row(modifier = Modifier.wrapContentWidth().clip(RoundedCornerShape(percent = 50)).background(Color.Black.copy(alpha = 0.45f)).padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier
+                                    .wrapContentWidth()
+                                    .clip(RoundedCornerShape(percent = 50))
+                                    .background(Color.Black.copy(alpha = 0.45f))
+                                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Icon(imageVector = icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(13.dp).graphicsLayer { if (settings.debugRotateWindSpeed && icon == Icons.Default.NorthEast) rotationZ = if (settings.animation) windRotation else 0f })
-                                Spacer(modifier = Modifier.width(4.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(text = label, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
                 }
 
-                val mapToIcon = remember { { t: WeatherType -> when (t) { WeatherType.Clear -> Icons.Default.WbSunny; WeatherType.Clouds, WeatherType.Mist, WeatherType.Fog, WeatherType.Haze, WeatherType.Smoke -> Icons.Default.FilterDrama; WeatherType.Rain, WeatherType.Drizzle -> Icons.Default.WaterDrop; WeatherType.Thunderstorm, WeatherType.Snow, WeatherType.Tornado, WeatherType.Squall -> Icons.Default.Thunderstorm; else -> Icons.Default.FilterDrama } } }
 
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).graphicsLayer {
                     val prog = smoothProgress.value
                     val offset = scrollOffset.floatValue
-                    val excessDpPx = (offset - 800f).coerceAtLeast(0f).dp.toPx()
-                    translationY = (680f - 500f * prog).dp.toPx() - excessDpPx
+                    val excessDpPx = (offset - 800f).coerceAtLeast(0f)
+                    translationY = (680f - 540f * prog).dp.toPx() - excessDpPx
                 }) {
-                    FullWidgetBox(icon = Icons.Default.WatchLater, label = "Hourly forecast", widgetBg = widgetBg, contentColor = contentColor) {
-                        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                            data.hourlyForecast.forEach { item ->
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(mapToIcon(item.type), contentDescription = null, tint = contentColor, modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(item.temp, color = contentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(item.time, color = secondaryContentColor, fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
+                    HourlyForecastWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
 
                     Spacer(Modifier.height(12.dp))
-                    FullWidgetBox(icon = Icons.Default.DateRange, label = "10-Day forecast", widgetBg = widgetBg, contentColor = contentColor) {
-                        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            data.dailyForecast.forEach { item ->
-                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                                    Text(item.day, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1.4f))
-                                    Icon(mapToIcon(item.type), contentDescription = null, tint = contentColor, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.weight(0.5f))
-                                    Text(item.tempMin, color = secondaryContentColor, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                    Spacer(Modifier.width(8.dp))
-                                    Box(modifier = Modifier.weight(1f).height(4.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha = 0.2f))) {
-                                        val pop = item.pop / 100f
-                                        Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(pop.coerceIn(0.05f, 1f)).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha = 0.7f)))
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(item.temp, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.width(36.dp))
-                                }
-                            }
-                        }
+                    DailyForecastWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
+
+                    Spacer(Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(modifier = Modifier.weight(1f)) { UVIndexWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        Box(modifier = Modifier.weight(1f)) { FeelsLikeWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                     }
 
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column {
-                                WidgetLabel(Icons.Default.WaterDrop, "Precipitation", contentColor)
-                                Spacer(Modifier.height(8.dp))
-                                val precipMm = data.rainfallNext24h ?: 0.0
-                                Text("${String.format("%.1f", precipMm)} mm", color = contentColor, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                                Text("expected today", color = secondaryContentColor, fontSize = 12.sp)
-                                Spacer(Modifier.weight(1f))
-                                Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha = 0.2f))) { Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(((precipMm / 50.0).coerceIn(0.0, 1.0).toFloat()).coerceAtLeast(0.03f)).clip(RoundedCornerShape(50)).background(Color(0xFF81D4FA))) }
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column {
-                                WidgetLabel(Icons.Default.WaterDrop, "Humidity", contentColor)
-                                Spacer(Modifier.height(8.dp))
-                                val hVal = data.humidityValue ?: 0
-                                Text("${hVal}%", color = contentColor, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                                Text(when { hVal > 80 -> "Very humid"; hVal > 60 -> "Humid"; hVal > 40 -> "Comfortable"; else -> "Dry" }, color = secondaryContentColor, fontSize = 12.sp)
-                                Spacer(Modifier.weight(1f))
-                                Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha = 0.2f))) { Box(modifier = Modifier.fillMaxHeight().fillMaxWidth((hVal / 100f).coerceAtLeast(0.03f)).clip(RoundedCornerShape(50)).background(Color(0xFF4FC3F7))) }
-                            }
-                        }
+                        Box(modifier = Modifier.weight(1f)) { PrecipitationWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        Box(modifier = Modifier.weight(1f)) { HumidityWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    MapWidget(data = data)
+
+                    Spacer(Modifier.height(12.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(modifier = Modifier.weight(1f)) { WindWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        Box(modifier = Modifier.weight(1f)) { AirQualityWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                     }
 
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column {
-                                WidgetLabel(Icons.Default.DeviceThermostat, "Feels like", contentColor)
-                                Spacer(Modifier.height(8.dp))
-                                Text("${data.feelsLike ?: "__"}°", color = contentColor, fontSize = 38.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.weight(1f))
-                                Text(data.feelsLikeDesc, color = secondaryContentColor, fontSize = 12.sp)
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column {
-                                WidgetLabel(Icons.Default.WbSunny, "UV Index", contentColor)
-                                Spacer(Modifier.height(8.dp))
-                                val uv = data.uvIndex
-                                Text(if (uv != null) String.format("%.1f", uv) else "__", color = contentColor, fontSize = 38.sp, fontWeight = FontWeight.Bold)
-                                Text(when { uv == null -> "--"; uv < 3 -> "Low"; uv < 6 -> "Moderate"; uv < 8 -> "High"; uv < 11 -> "Very High"; else -> "Extreme" }, color = secondaryContentColor, fontSize = 12.sp)
-                                Spacer(Modifier.weight(1f))
-                                if (uv != null) {
-                                    val uvColor = when { uv < 3 -> Color(0xFF66BB6A); uv < 6 -> Color(0xFFFFEE58); uv < 8 -> Color(0xFFFFA726); uv < 11 -> Color(0xFFEF5350); else -> Color(0xFFAB47BC) }
-                                    Box(modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(50)).background(contentColor.copy(alpha = 0.2f))) { Box(modifier = Modifier.fillMaxHeight().fillMaxWidth(((uv / 12.0).coerceIn(0.0, 1.0).toFloat()).coerceAtLeast(0.03f)).clip(RoundedCornerShape(50)).background(uvColor)) }
-                                }
-                            }
-                        }
+                        Box(modifier = Modifier.weight(1f)) { VisibilityWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        Box(modifier = Modifier.weight(1f)) { PressureWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                     }
 
                     Spacer(Modifier.height(12.dp))
-                    if (data.lat != null && data.lon != null) {
-                        val lat = data.lat; val lon = data.lon
-                        val mapHtml = remember(lat, lon) { "<!DOCTYPE html><html><head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\"><link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.css\"/><script src=\"https://unpkg.com/leaflet@1.9.4/dist/leaflet.js\"></script><style>body{margin:0;padding:0}#map{width:100%;height:100vh;}</style></head><body><div id=\"map\"></div><script>var map = L.map('map', {zoomControl:false, attributionControl:false, dragging:false, scrollWheelZoom:false, touchZoom:false, doubleClickZoom:false}).setView([$lat,$lon], 10);L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);L.circleMarker([$lat,$lon], {radius:6, color:'#fff', fillColor:'#4fc3f7', fillOpacity:1, weight:2}).addTo(map);</script></body></html>" }
-                        Box(modifier = Modifier.fillMaxWidth().height(200.dp).clip(RoundedCornerShape(24.dp))) {
-                            AndroidView(factory = { ctx -> WebView(ctx).also { wv -> wv.settings.javaScriptEnabled = true; wv.settings.domStorageEnabled = true; wv.webViewClient = WebViewClient(); wv.setBackgroundColor(android.graphics.Color.TRANSPARENT); wv.loadDataWithBaseURL("https://openstreetmap.org", mapHtml, "text/html", "utf-8", null) } }, modifier = Modifier.fillMaxSize())
-                            Box(modifier = Modifier.align(Alignment.TopStart).padding(12.dp).clip(RoundedCornerShape(12.dp)).background(Color(0x99000000)).padding(horizontal = 10.dp, vertical = 4.dp)) { Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF81D4FA), modifier = Modifier.size(12.dp)); Spacer(Modifier.width(4.dp)); Text("${data.location.uppercase()} MAP", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp) } }
-                        }
-                    }
+                    SunriseSunsetWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
+
+                    Spacer(Modifier.height(12.dp))
+                    RainfallWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
 
                     Spacer(Modifier.height(12.dp))
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                WidgetLabel(Icons.Default.NorthEast, "Wind", contentColor)
-                                Spacer(Modifier.height(6.dp))
-                                Canvas(modifier = Modifier.size(70.dp)) {
-                                    val cx = size.width / 2; val cy = size.height / 2; val r = size.width / 2 - 4.dp.toPx()
-                                    drawCircle(color = contentColor.copy(alpha = 0.15f), radius = r)
-                                    for (d in 0..315 step 45) { val rd = Math.toRadians(d.toDouble()); drawCircle(color = contentColor.copy(alpha = 0.4f), radius = 2.dp.toPx(), center = Offset(cx + (r - 6.dp.toPx()) * sin(rd).toFloat(), cy - (r - 6.dp.toPx()) * cos(rd).toFloat())) }
-                                    val rad = Math.toRadians((data.windDeg ?: 0).toDouble())
-                                    val tip = Offset(cx + (r - 8.dp.toPx()) * sin(rad).toFloat(), cy - (r - 8.dp.toPx()) * cos(rad).toFloat())
-                                    drawLine(contentColor, Offset(cx - 20.dp.toPx() * sin(rad).toFloat(), cy + 20.dp.toPx() * cos(rad).toFloat()), tip, strokeWidth = 2.5f, cap = StrokeCap.Round)
-                                    drawCircle(Color(0xFF4FC3F7), radius = 4.dp.toPx(), center = tip)
-                                }
-                                Text(data.wind, color = contentColor, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                if (data.windGust != "--") Text("Gust: ${data.windGust}", color = secondaryContentColor, fontSize = 11.sp)
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column {
-                                WidgetLabel(Icons.Default.FilterDrama, "Air Quality", contentColor)
-                                Spacer(Modifier.height(8.dp))
-                                val aqi = data.aqiValue ?: 0
-                                Text(when (aqi) { 1 -> "Good"; 2 -> "Fair"; 3 -> "Moderate"; 4 -> "Poor"; 5 -> "Very Poor"; else -> "--" }, color = contentColor, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                                Text("AQI index $aqi/5", color = secondaryContentColor, fontSize = 12.sp)
-                                Spacer(Modifier.weight(1f))
-                                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) { listOf(Color(0xFF66BB6A), Color(0xFFFFEE58), Color(0xFFFFA726), Color(0xFFEF5350), Color(0xFFAB47BC)).forEachIndexed { i, c -> Box(modifier = Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(50)).background(if (i < aqi) c else contentColor.copy(alpha = 0.2f))) } }
-                            }
-                        }
+                        Box(modifier = Modifier.weight(1f)) { MoonPhaseWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        Box(modifier = Modifier.weight(1f)) { AveragesWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                     }
 
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column {
-                                WidgetLabel(Icons.Default.Visibility, "Visibility", contentColor)
-                                Spacer(Modifier.height(8.dp))
-                                Text(data.visibility, color = contentColor, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.weight(1f))
-                                val visKm = data.visibilityM?.div(1000) ?: 0
-                                Text(when { visKm >= 10 -> "Clear view"; visKm >= 5 -> "Mostly clear"; visKm >= 2 -> "Light haze"; else -> "Dense fog" }, color = secondaryContentColor, fontSize = 12.sp)
-                            }
-                        }
-                        Box(modifier = Modifier.weight(1f).height(195.dp).clip(RoundedCornerShape(24.dp)).background(widgetBg).padding(16.dp)) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                WidgetLabel(Icons.Default.Compress, "Pressure", contentColor)
-                                Spacer(Modifier.height(6.dp))
-                                val pHpa = data.pressure ?: 1013
-                                Canvas(modifier = Modifier.size(70.dp)) {
-                                    val cx = size.width / 2; val cy = size.height / 2; val r = size.width / 2 - 4.dp.toPx()
-                                    for (t in 0..120 step 10) { val ang = Math.toRadians(180.0 + t * 1.5); drawLine(contentColor.copy(alpha = 0.3f), Offset(cx + (r - 8.dp.toPx()) * cos(ang).toFloat(), cy + (r - 8.dp.toPx()) * sin(ang).toFloat()), Offset(cx + r * cos(ang).toFloat(), cy + r * sin(ang).toFloat()), strokeWidth = 1.5f) }
-                                    val needleAng = Math.toRadians(180.0 + ((pHpa - 950) / 100f).coerceIn(0f, 1f) * 180.0)
-                                    drawLine(contentColor, Offset(cx, cy), Offset(cx + (r - 10.dp.toPx()) * cos(needleAng).toFloat(), cy + (r - 10.dp.toPx()) * sin(needleAng).toFloat()), strokeWidth = 2.5f, cap = StrokeCap.Round)
-                                    drawCircle(Color(0xFF4FC3F7), radius = 4.dp.toPx(), center = Offset(cx, cy))
-                                }
-                                Text("$pHpa hPa", color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Low", color = secondaryContentColor, fontSize = 10.sp); Text("High", color = secondaryContentColor, fontSize = 10.sp) }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    FullWidgetBox(icon = Icons.Default.WbSunny, label = "Sunrise & Sunset", widgetBg = widgetBg, contentColor = contentColor) {
-                        val sunriseStr = if (data.sunriseEpoch != null) epochToTimeStr(data.sunriseEpoch) else "--"
-                        val sunsetStr  = if (data.sunsetEpoch  != null) epochToTimeStr(data.sunsetEpoch)  else "--"
-                        val nowMs = System.currentTimeMillis() / 1000L
-                        val sunProgress = if (data.sunriseEpoch != null && data.sunsetEpoch != null && nowMs in data.sunriseEpoch..data.sunsetEpoch) ((nowMs - data.sunriseEpoch).toFloat() / (data.sunsetEpoch - data.sunriseEpoch).toFloat()).coerceIn(0f, 1f) else if (data.sunriseEpoch != null && nowMs < data.sunriseEpoch) 0f else 1f
-
-                        Canvas(modifier = Modifier.fillMaxWidth().height(80.dp)) {
-                            val w = size.width; val h = size.height; val arcLeft = 16.dp.toPx(); val arcRight = w - 16.dp.toPx(); val arcTop = 8.dp.toPx()
-                            var x = arcLeft; while (x < arcRight) { drawLine(contentColor.copy(alpha = 0.25f), Offset(x, h - 20.dp.toPx()), Offset(x + 6.dp.toPx(), h - 20.dp.toPx()), strokeWidth = 1.5f); x += 10.dp.toPx() }
-                            drawPath(Path().apply { moveTo(arcLeft, h - 20.dp.toPx()); cubicTo(arcLeft, arcTop, arcRight, arcTop, arcRight, h - 20.dp.toPx()) }, color = contentColor.copy(alpha = 0.3f), style = Stroke(width = 2.dp.toPx()))
-                            val sunX = arcLeft + (arcRight - arcLeft) * sunProgress
-                            val sunYSimple = h - 20.dp.toPx() - (4 * sunProgress * (1 - sunProgress)) * (h - arcTop - 20.dp.toPx())
-                            drawCircle(contentColor, radius = 8.dp.toPx(), center = Offset(sunX, sunYSimple)); drawCircle(Color(0xFFFFECB3), radius = 5.dp.toPx(), center = Offset(sunX, sunYSimple))
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Column { Text("SUNRISE", color = secondaryContentColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp); Text(sunriseStr, color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                            Column(horizontalAlignment = Alignment.End) { Text("SUNSET", color = secondaryContentColor, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp); Text(sunsetStr, color = contentColor, fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    FullWidgetBox(icon = Icons.Default.WaterDrop, label = "Rainfall", widgetBg = widgetBg, contentColor = contentColor) {
-                        Text("${String.format("%.0f", data.rainfallLast24h ?: 0.0)} mm", color = contentColor, fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                        Text("in last 24h", color = secondaryContentColor, fontSize = 13.sp)
-                        Spacer(Modifier.height(16.dp))
-                        Text("${String.format("%.0f", data.rainfallNext24h ?: 0.0)} mm expected in next 24h.", color = contentColor.copy(alpha = 0.8f), fontSize = 14.sp)
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    FullWidgetBox(icon = Icons.Default.NightsStay, label = "Moon Phase", widgetBg = widgetBg, contentColor = contentColor) {
-                        val phase = data.moonPhase ?: 0.0
-                        val phaseName = when { phase < 0.03 || phase > 0.97 -> "New Moon"; phase < 0.22 -> "Waxing Crescent"; phase < 0.28 -> "First Quarter"; phase < 0.47 -> "Waxing Gibbous"; phase < 0.53 -> "Full Moon"; phase < 0.72 -> "Waning Gibbous"; phase < 0.78 -> "Last Quarter"; else -> "Waning Crescent" }
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                            Canvas(modifier = Modifier.size(72.dp)) {
-                                val cx = size.width / 2; val cy = size.height / 2; val r = size.width / 2 - 2.dp.toPx()
-                                drawCircle(contentColor.copy(alpha = 0.1f), radius = r); drawCircle(Color(0xFFFFECB3).copy(alpha = 0.9f), radius = r)
-                                val illumination = if (phase <= 0.5) phase * 2 else (1.0 - phase) * 2  
-                                if (phase < 0.5) drawCircle(Color(0xFF1A1A2E), radius = r, center = Offset(cx + (((1.0 - illumination).toFloat()) * 2 - 1) * r, cy))
-                                else drawCircle(Color(0xFF1A1A2E), radius = r, center = Offset(cx + (1 - ((1.0 - illumination).toFloat()) * 2) * r, cy))
-                            }
-                            Column { Text(phaseName, color = contentColor, fontSize = 20.sp, fontWeight = FontWeight.Bold); Spacer(Modifier.height(4.dp)); Text("${(phase * 100).toInt()}% through cycle", color = secondaryContentColor, fontSize = 13.sp) }
-                        }
-                    }
-                    Spacer(Modifier.height(120.dp))
+                    Spacer(Modifier.height(140.dp))
                 }
             }
 
-            if (settings.enableClouds) {
+            if (!settings.vulkan && settings.enableClouds) {
                 Box(modifier = Modifier.fillMaxSize().drawWithCache {
                     onDrawBehind {
                         cloudFrontShader.setFloatUniform("iResolutionX", size.width)
@@ -670,6 +562,8 @@ fun MainWeatherScreen(
                     }
                 })
             }
+
+
         }
 
         Box(
@@ -703,6 +597,12 @@ fun MainWeatherScreen(
                 transformOrigin = TransformOrigin(0f, 0f)
                 translationX = 32.dp.toPx()
                 translationY = (130f - 70f * prog).dp.toPx()
+                
+                if (settings.blur) {
+                    val offset = scrollOffset.floatValue
+                    val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
+                    if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.DECAL).asComposeRenderEffect()
+                }
             }
         )
 
@@ -713,6 +613,12 @@ fun MainWeatherScreen(
                 val finalX = exactTitleWidthDp.toPx() + 8.dp.toPx()
                 translationX = 32.dp.toPx() + (finalX * prog)
                 translationY = (130f - 70f * prog).dp.toPx()
+                
+                if (settings.blur) {
+                    val offset = scrollOffset.floatValue
+                    val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
+                    if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.DECAL).asComposeRenderEffect()
+                }
             })
         }
 
@@ -728,11 +634,17 @@ fun MainWeatherScreen(
                 scaleX = scale; scaleY = scale
                 transformOrigin = TransformOrigin(0f, 0f)
                 alpha = (1f - 0.3f * prog).coerceIn(0f, 1f)
-                
+
                 val exactTitlePx = exactTitleWidthDp.toPx()
                 val targetDockedX = 32.dp.toPx() + exactTitlePx + 22.dp.toPx()
                 translationX = 32.dp.toPx() + (targetDockedX - 32.dp.toPx()) * prog
                 translationY = (175f - 115f * prog).dp.toPx()
+                
+                if (settings.blur) {
+                    val offset = scrollOffset.floatValue
+                    val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
+                    if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.DECAL).asComposeRenderEffect()
+                }
             }
         )
 
@@ -749,14 +661,15 @@ fun MainWeatherScreen(
                 val providerName = settings.provider.lowercase()
                 val cityInfoStr = if (settings.headerType == HeaderType.Standard) "" else "${data.location.lowercase()} - "
                 val elapsedSec = ((currentTickMs - data.lastUpdatedMs) / 1000).coerceAtLeast(0)
-                
+
                 val timeString = when {
                     data.lastUpdatedMs == 0L -> "Connecting..."
+                    data.temp == null && data.lastUpdatedMs > 0L -> "Cached — refreshing..."
                     elapsedSec < 15 -> "Updated just now"
                     elapsedSec < 60 -> "Updated $elapsedSec seconds ago"
                     else -> "Updated at ${data.lastUpdated}"
                 }
-                
+
                 "${cityInfoStr}$timeString from $providerName"
             }
         }
@@ -767,6 +680,12 @@ fun MainWeatherScreen(
             val centerX = (screenWidthPx - size.width) / 2f
             val leftX = 32.dp.toPx()
             translationX = centerX + (leftX - centerX) * prog
+            
+            if (settings.blur) {
+                val offset = scrollOffset.floatValue
+                val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
+                if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.DECAL).asComposeRenderEffect()
+            }
         }) {
             Icon(Icons.Default.Navigation, contentDescription = null, tint = contentColor.copy(alpha = 0.8f), modifier = Modifier.size(10.dp).graphicsLayer { rotationZ = 45f })
             Spacer(modifier = Modifier.width(6.dp))
@@ -785,11 +704,12 @@ fun AnimatedOdometerText(
     snapTo: Int? = null,
     animationEnabled: Boolean = true
 ) {
-    val textStr = temp?.toString() ?: "00"
+    val isNull = temp == null
+    val textStr = temp?.toString() ?: "--"
     val snapStr = snapTo?.toString()
-    
-    val maxLength = max(textStr.length, snapStr?.length ?: 0).coerceAtLeast(2)
-    val paddedText = textStr.padStart(maxLength, '0')
+
+    val maxLength = if (isNull) 2 else max(textStr.length, snapStr?.length ?: 0).coerceAtLeast(2)
+    val paddedText = if (isNull) textStr else textStr.padStart(maxLength, '0')
     val paddedSnap = snapStr?.padStart(maxLength, '0')
 
     val maskModifier = modifier.graphicsLayer {
@@ -814,13 +734,13 @@ fun AnimatedOdometerText(
     ) {
         paddedText.forEachIndexed { index, char ->
             val snapChar = paddedSnap?.getOrNull(index)
-            
+
             DigitColumn(
                 targetChar = char,
                 snapChar = snapChar,
                 style = style,
                 animationEnabled = animationEnabled,
-                delayMillis = index * 150 
+                delayMillis = index * 150
             )
         }
         Text("°", style = style)
@@ -836,12 +756,12 @@ private fun DigitColumn(
     delayMillis: Int
 ) {
     val textMeasurer = rememberTextMeasurer()
-    
+
     val charWidthPx = remember(style) {
         (0..9).maxOf { textMeasurer.measure(it.toString(), style).size.width }
     }
-    val heightPx = remember(style) { 
-        textMeasurer.measure("0", style).size.height.toFloat() 
+    val heightPx = remember(style) {
+        textMeasurer.measure("0", style).size.height.toFloat()
     }
 
     if (!targetChar.isDigit()) {
@@ -871,12 +791,12 @@ private fun DigitColumn(
             val currentMod = anim.value % 10f
             val currentWrapped = if (currentMod < 0) currentMod + 10f else currentMod
             var diff = targetDigit - currentWrapped
-            
+
             if (diff > 5f) diff -= 10f
             if (diff < -5f) diff += 10f
-            
+
             val finalTarget = anim.value + diff
-            
+
             if (abs(anim.targetValue - finalTarget) > 0.01f) {
                 if (animationEnabled) {
                     delay(delayMillis.toLong())
@@ -931,10 +851,10 @@ private fun DigitColumn(
         }
     }
 }
+
 //────────────────────────────────────────────────────────────────────────────
 
 private fun getSkyColors(weather: WeatherType, state: VisualState): Pair<Color, Color> {
-    // Overhauled with realistic, desaturated atmospheric scattering colors
     return when (state) {
         VisualState.Sunrise -> when (weather) {
             WeatherType.Clear -> Color(0xFF6B728E) to Color(0xFFD6A587)
@@ -942,7 +862,7 @@ private fun getSkyColors(weather: WeatherType, state: VisualState): Pair<Color, 
             else -> Color(0xFF4A4E5B) to Color(0xFF7A736E)
         }
         VisualState.Day -> when (weather) {
-            WeatherType.Clear -> Color(0xFF4B6E94) to Color(0xFF90B4CE) // Realistic sky blue
+            WeatherType.Clear -> Color(0xFF4B6E94) to Color(0xFF90B4CE)
             WeatherType.Clouds -> Color(0xFF6C7A89) to Color(0xFF95A5A6)
             WeatherType.Rain, WeatherType.Drizzle -> Color(0xFF4C5B66) to Color(0xFF6E7D88)
             WeatherType.Thunderstorm -> Color(0xFF34414A) to Color(0xFF4B5A66)
@@ -954,7 +874,7 @@ private fun getSkyColors(weather: WeatherType, state: VisualState): Pair<Color, 
         }
         VisualState.Sunset -> when (weather) {
             WeatherType.Clear -> Color(0xFF384166) to Color(0xFFB57064)
-            WeatherType.Clouds -> Color(0xFF3E4357) to Color(0xFF876A68) // Fixes bright cyan bug
+            WeatherType.Clouds -> Color(0xFF3E4357) to Color(0xFF876A68)
             else -> Color(0xFF2C3242) to Color(0xFF5C4A4D)
         }
         VisualState.Evening -> when (weather) {
@@ -970,7 +890,6 @@ private fun getSkyColors(weather: WeatherType, state: VisualState): Pair<Color, 
 }
 
 private fun getCloudColor(weather: WeatherType, state: VisualState): Color {
-    // Matching clouds to the new desaturated lighting profiles
     return when (state) {
         VisualState.Sunrise -> Color(0xFFD8B9AD)
         VisualState.Day -> if (weather == WeatherType.Clear) Color(0xFFE8ECEF) else Color(0xFFB0B9C2)
@@ -982,4 +901,3 @@ private fun getCloudColor(weather: WeatherType, state: VisualState): Color {
     }
 }
 
-private fun epochToTimeStr(epoch: Long): String { return java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(epoch * 1000)) }

@@ -328,6 +328,7 @@ fun SettingsScreen(
                             SettingsSwitch("Enable Clouds", "Volumetric procedural cloud layer", Icons.Outlined.FilterDrama, settings.enableClouds) { onUpdateSettings(settings.copy(enableClouds = it)) }
                             SettingsSwitch("Rotate Wind Arrow", "Continously rotate the arrow on wind speed", Icons.AutoMirrored.Outlined.RotateRight, settings.debugRotateWindSpeed) { onUpdateSettings(settings.copy(debugRotateWindSpeed = it)) }
                             SettingsSwitch("Demo Mode", "Force static placeholder data for UI testing", Icons.Outlined.Science, settings.demoMode) { onUpdateSettings(settings.copy(demoMode = it)) }
+                            SettingsSwitch("Vulkan Rendering", "Experimental Vulkan/WGPU background engine", Icons.Outlined.Speed, settings.vulkan) { onUpdateSettings(settings.copy(vulkan = it)) }
                         }
                     }
                     item { Text("Experimental Options", color = Color.White.copy(alpha = 0.5f), fontSize = 14.sp) }

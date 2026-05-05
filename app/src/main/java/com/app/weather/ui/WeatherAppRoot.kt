@@ -78,6 +78,7 @@ data class AppSettings(
     val locationBasedWeather: Boolean = true,
     val preciseLocation: Boolean = true,
     val demoMode:     Boolean    = false,
+    val vulkan:       Boolean    = false,
     val visualStateOverride: VisualState = VisualState.Automatic,
     val refreshIntervalSec: Int = 30
 )

@@ -1,4 +1,0 @@
-com.app.weather.test.app-androidTest-0 /Users/roo/Documents/weatherify/app/build/generated/res/resValues/androidTest/debug
-com.app.weather.test.app-mergeDebugAndroidTestResources-1 /Users/roo/Documents/weatherify/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/merged.dir
-com.app.weather.test.app-mergeDebugAndroidTestResources-2 /Users/roo/Documents/weatherify/app/build/intermediates/incremental/debugAndroidTest/mergeDebugAndroidTestResources/stripped.dir
-com.app.weather.test.app-debugAndroidTest-3 /Users/roo/Documents/weatherify/app/build/intermediates/merged_res/debugAndroidTest/mergeDebugAndroidTestResources

@@ -6,18 +6,20 @@ import android.view.SurfaceHolder
 import android.view.SurfaceView
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 
 @Composable
 fun WeatherEngineView(modifier: Modifier = Modifier, scrollOffset: Float = 0f) {
+    val context = LocalContext.current
+    val engineView = remember { EngineSurfaceView(context) }
+    
     AndroidView(
         modifier = modifier.fillMaxSize(),
-        factory = { context ->
-            EngineSurfaceView(context)
-        },
+        factory = { engineView },
         update = { view ->
-            // Pass the scroll offset to the Rust rendering engine via JNI to adjust cloud/text positioning
             view.updateScroll(scrollOffset)
         }
     )
@@ -26,9 +28,9 @@ fun WeatherEngineView(modifier: Modifier = Modifier, scrollOffset: Float = 0f) {
 class EngineSurfaceView(context: Context) : SurfaceView(context), SurfaceHolder.Callback {
     init {
         holder.addCallback(this)
-        // Make surface background transparent to see through if needed
-        holder.setFormat(PixelFormat.TRANSLUCENT)
-        setZOrderOnTop(false)
+        // Ensure the surface is treated as a media layer for better performance
+        holder.setFormat(PixelFormat.RGBA_8888)
+        setZOrderMediaOverlay(true)
     }
 
     override fun surfaceCreated(holder: SurfaceHolder) {
