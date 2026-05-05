@@ -75,15 +75,13 @@ private suspend fun fetchStitchedMap(lat: Double, lon: Double, zoom: Int = 12): 
 // clip if the canvas doesn't inherit the clip stack, which was the bug.
 
 @Composable
-fun MapWidget(data: WeatherData) {
+fun MapWidget(data: WeatherData, modifier: Modifier = Modifier) {
     val lat = data.lat
     val lon = data.lon
 
     if (lat == null || lon == null) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
+            modifier = modifier
                 .clip(RoundedCornerShape(24.dp))
                 .drawBehind { drawRect(Color.White.copy(alpha = 0.08f)) },
             contentAlignment = Alignment.Center
@@ -110,9 +108,7 @@ fun MapWidget(data: WeatherData) {
     val imageBitmap = remember(bmp) { bmp?.asImageBitmap() }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(24.dp))   // clip BEFORE drawBehind
             .drawBehind {
                 // Background fill
