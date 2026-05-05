@@ -429,6 +429,7 @@ fun MainWeatherScreen(
             Box(modifier = Modifier.fillMaxWidth().height(8000.dp).graphicsLayer {
                 val offset = scrollOffset.floatValue
                 translationY = if (offset < 0f) -offset * 0.4f else 0f
+                clip = true  // prevent widgets from drawing outside their scroll bounds
 
                 if (settings.blur) {
                     val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
