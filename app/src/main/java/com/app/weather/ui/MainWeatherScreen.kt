@@ -38,6 +38,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.app.weather.ui.theme.OpenRundeFontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -304,7 +306,7 @@ fun MainWeatherScreen(
     val headerText = when (settings.headerType) { HeaderType.Greeting -> data.type.title; HeaderType.Standard -> data.location; HeaderType.Sunrise -> if (data.sunriseEpoch != null) "Sunrise at ${epochToTimeStr(data.sunriseEpoch)}" else "Sunrise --"; HeaderType.FeelsLike -> "Feels like ${data.feelsLike ?: "__"}°"; HeaderType.Disabled -> "" }
 
     val textMeasurer = rememberTextMeasurer()
-    val titleTextWidthPx = remember(headerText) { textMeasurer.measure(text = headerText, style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold)).size.width }
+    val titleTextWidthPx = remember(headerText) { textMeasurer.measure(text = headerText, style = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, fontFamily = OpenRundeFontFamily, letterSpacing = (-0.3).sp)).size.width }
     val exactTitleWidthDp = with(density) { titleTextWidthPx.toDp() }
 
     val skyTopColor by animateColorAsState(getSkyColors(data.type, visualState).first, animationSpec = if (settings.animation) tween(1500) else snap(), label = "")
@@ -590,7 +592,7 @@ fun MainWeatherScreen(
         }
 
         Text(
-            text = headerText, color = contentColor.copy(alpha = 0.9f), fontSize = 28.sp, fontWeight = FontWeight.Bold,
+            text = headerText, color = contentColor.copy(alpha = 0.9f), fontSize = 28.sp, fontWeight = FontWeight.Bold, fontFamily = OpenRundeFontFamily, letterSpacing = (-0.3).sp,
             modifier = Modifier.graphicsLayer {
                 val prog = smoothProgress.value
                 val scale = (18f + 10f * prog) / 28f
@@ -627,7 +629,7 @@ fun MainWeatherScreen(
         AnimatedOdometerText(
             temp = displayTemp,
             snapTo = forceSnap,
-            style = TextStyle(fontSize = 130.sp, fontWeight = FontWeight.Bold, color = contentColor),
+            style = TextStyle(fontSize = 130.sp, fontWeight = FontWeight.Bold, color = contentColor, fontFamily = OpenRundeFontFamily, letterSpacing = (-0.5).sp),
             animationEnabled = settings.animation,
             modifier = Modifier.graphicsLayer {
                 val prog = smoothProgress.value
@@ -713,6 +715,13 @@ fun AnimatedOdometerText(
     val paddedText = if (isNull) textStr else textStr.padStart(maxLength, '0')
     val paddedSnap = snapStr?.padStart(maxLength, '0')
 
+    val strokeStyle = remember(style) {
+        style.copy(
+            color = Color.Black.copy(alpha = 0.5f),
+            drawStyle = Stroke(width = 0.8f)
+        )
+    }
+
     val maskModifier = modifier.graphicsLayer {
         compositingStrategy = CompositingStrategy.Offscreen
     }.drawWithContent {
@@ -728,10 +737,13 @@ fun AnimatedOdometerText(
         )
     }
 
+    val fontSizeVal = style.fontSize.value
+    val rowSpacing = if (fontSizeVal > 0) (-fontSizeVal * 0.12f).dp else 0.dp
+
     Row(
         modifier = maskModifier.animateContentSize(),
         verticalAlignment = Alignment.Top,
-        horizontalArrangement = Arrangement.Start
+        horizontalArrangement = Arrangement.spacedBy(rowSpacing)
     ) {
         paddedText.forEachIndexed { index, char ->
             val snapChar = paddedSnap?.getOrNull(index)
@@ -740,11 +752,15 @@ fun AnimatedOdometerText(
                 targetChar = char,
                 snapChar = snapChar,
                 style = style,
+                strokeStyle = strokeStyle,
                 animationEnabled = animationEnabled,
                 delayMillis = index * 150
             )
         }
-        Text("°", style = style)
+        Box(contentAlignment = Alignment.Center) {
+            Text("°", style = strokeStyle)
+            Text("°", style = style)
+        }
     }
 }
 
@@ -753,6 +769,7 @@ private fun DigitColumn(
     targetChar: Char,
     snapChar: Char?,
     style: TextStyle,
+    strokeStyle: TextStyle,
     animationEnabled: Boolean,
     delayMillis: Int
 ) {
@@ -773,6 +790,7 @@ private fun DigitColumn(
             },
             contentAlignment = Alignment.Center
         ) {
+            Text(targetChar.toString(), style = strokeStyle)
             Text(targetChar.toString(), style = style)
         }
         return
@@ -833,9 +851,8 @@ private fun DigitColumn(
             val itemBlur = (absOffset * 10f).coerceIn(0f, 20f)
 
             if (itemAlpha > 0f) {
-                Text(
-                    text = displayDigit.toString(),
-                    style = style,
+                Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier.graphicsLayer {
                         translationY = offset
                         alpha = itemAlpha
@@ -847,7 +864,16 @@ private fun DigitColumn(
                             renderEffect = null
                         }
                     }
-                )
+                ) {
+                    Text(
+                        text = displayDigit.toString(),
+                        style = strokeStyle
+                    )
+                    Text(
+                        text = displayDigit.toString(),
+                        style = style
+                    )
+                }
             }
         }
     }

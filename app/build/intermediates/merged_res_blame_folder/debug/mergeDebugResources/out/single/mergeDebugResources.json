@@ -1,42 +1,58 @@
 [
     {
-        "merged": "com.app.weather.app-debug-45:/xml_data_extraction_rules.xml.flat",
-        "source": "com.app.weather.app-main-47:/xml/data_extraction_rules.xml"
+        "merged": "com.app.weather.app-debug-45:/font_openrunde_medium.otf.flat",
+        "source": "com.app.weather.app-main-47:/font/openrunde_medium.otf"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable_profile_pic.png.flat",
-        "source": "com.app.weather.app-main-47:/drawable/profile_pic.png"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable_profile_pic.png.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable/profile_pic.png"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/xml_backup_rules.xml.flat",
-        "source": "com.app.weather.app-main-47:/xml/backup_rules.xml"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable_ic_launcher_background.xml.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable/ic_launcher_background.xml"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable_iconsdark.png.flat",
-        "source": "com.app.weather.app-main-47:/drawable/iconsdark.png"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/xml_data_extraction_rules.xml.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/xml/data_extraction_rules.xml"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable_iconslight.png.flat",
-        "source": "com.app.weather.app-main-47:/drawable/iconslight.png"
+        "merged": "com.app.weather.app-debug-45:/font_openrunde_bold.otf.flat",
+        "source": "com.app.weather.app-main-47:/font/openrunde_bold.otf"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.app.weather.app-main-47:/drawable/ic_launcher_foreground.xml"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable_iconsmoon.png.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable/iconsmoon.png"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.app.weather.app-main-47:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable_iconsmoon.png.flat",
-        "source": "com.app.weather.app-main-47:/drawable/iconsmoon.png"
+        "merged": "com.app.weather.app-debug-45:/font_openrunde_regular.otf.flat",
+        "source": "com.app.weather.app-main-47:/font/openrunde_regular.otf"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable-nodpi_cloud_layer.png.flat",
-        "source": "com.app.weather.app-main-47:/drawable-nodpi/cloud_layer.png"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable_iconslight.png.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable/iconslight.png"
     },
     {
-        "merged": "com.app.weather.app-debug-45:/drawable_ic_launcher_background.xml.flat",
-        "source": "com.app.weather.app-main-47:/drawable/ic_launcher_background.xml"
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable_iconsdark.png.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable/iconsdark.png"
+    },
+    {
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/xml_backup_rules.xml.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/xml/backup_rules.xml"
+    },
+    {
+        "merged": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-debug-45:/drawable-nodpi_cloud_layer.png.flat",
+        "source": "/Users/roo/.gradle/daemon/9.0.0/com.app.weather.app-main-47:/drawable-nodpi/cloud_layer.png"
+    },
+    {
+        "merged": "com.app.weather.app-debug-45:/font_openrunde_semibold.otf.flat",
+        "source": "com.app.weather.app-main-47:/font/openrunde_semibold.otf"
     }
 ]

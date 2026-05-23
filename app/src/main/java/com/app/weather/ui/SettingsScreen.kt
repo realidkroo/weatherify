@@ -53,6 +53,7 @@ import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.app.weather.ui.theme.OpenRundeFontFamily
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -556,7 +557,7 @@ fun SettingsScreen(
 
                         Text(
                             text = when(swipeBgMenu) { "General" -> "General"; "Appearance" -> "Appearance"; "DebugMenu" -> "Debug Menus"; else -> "Settings" },
-                            color = MaterialTheme.colorScheme.onBackground, fontSize = 40.sp, fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground, fontSize = 40.sp, fontWeight = FontWeight.Bold, fontFamily = OpenRundeFontFamily, letterSpacing = (-0.4).sp,
                             modifier = Modifier.graphicsLayer {
                                 translationX = bgTitleX.toPx(); translationY = bgTitleY.toPx()
                                 scaleX = bgTitleScale; scaleY = bgTitleScale
@@ -810,7 +811,9 @@ fun SettingsScreen(
                                 text = title,
                                 color = MaterialTheme.colorScheme.onBackground,
                                 fontSize = 40.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = OpenRundeFontFamily,
+                                letterSpacing = (-0.5).sp
                             )
                         }
                     }

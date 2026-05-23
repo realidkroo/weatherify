@@ -7,6 +7,10 @@ drawable iconsdark
 drawable iconslight
 drawable iconsmoon
 drawable profile_pic
+font openrunde_bold
+font openrunde_medium
+font openrunde_regular
+font openrunde_semibold
 mipmap ic_launcher
 style Theme.WeatherApp
 xml backup_rules

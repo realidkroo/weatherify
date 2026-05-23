@@ -4,6 +4,7 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -13,7 +14,38 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
+import com.app.weather.R
+
+val OpenRundeFontFamily = FontFamily(
+    Font(R.font.openrunde_regular, FontWeight.Normal),
+    Font(R.font.openrunde_medium, FontWeight.Medium),
+    Font(R.font.openrunde_semibold, FontWeight.SemiBold),
+    Font(R.font.openrunde_bold, FontWeight.Bold)
+)
+
+private val DefaultTypography = Typography()
+val AppTypography = Typography(
+    displayLarge = DefaultTypography.displayLarge.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    displayMedium = DefaultTypography.displayMedium.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    displaySmall = DefaultTypography.displaySmall.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    headlineLarge = DefaultTypography.headlineLarge.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    headlineMedium = DefaultTypography.headlineMedium.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    headlineSmall = DefaultTypography.headlineSmall.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    titleLarge = DefaultTypography.titleLarge.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    titleMedium = DefaultTypography.titleMedium.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    titleSmall = DefaultTypography.titleSmall.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    bodyLarge = DefaultTypography.bodyLarge.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    bodyMedium = DefaultTypography.bodyMedium.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    bodySmall = DefaultTypography.bodySmall.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    labelLarge = DefaultTypography.labelLarge.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    labelMedium = DefaultTypography.labelMedium.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp),
+    labelSmall = DefaultTypography.labelSmall.copy(fontFamily = OpenRundeFontFamily, letterSpacing = (-0.2).sp)
+)
 
 private val DarkColorScheme = darkColorScheme(
     primary = Color.White,
@@ -74,6 +106,7 @@ fun WeatherAppTheme(
 
     MaterialTheme(
         colorScheme = colorScheme,
+        typography = AppTypography,
         content = content
     )
 }

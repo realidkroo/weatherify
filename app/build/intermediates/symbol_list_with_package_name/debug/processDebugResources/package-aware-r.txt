@@ -110,6 +110,10 @@ drawable notification_template_icon_low_bg
 drawable notification_tile_bg
 drawable notify_panel_notification_icon_bg
 drawable profile_pic
+font openrunde_bold
+font openrunde_medium
+font openrunde_regular
+font openrunde_semibold
 id accessibility_action_clickable_span
 id accessibility_custom_action_0
 id accessibility_custom_action_1

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.app.weather.ui.theme.OpenRundeFontFamily
 
 @Composable
 fun DebugMenuScreen(
@@ -86,7 +87,7 @@ fun DebugMenuScreen(
                 AnimatedOdometerText(
                     temp = activeAnimate,
                     snapTo = activeSnap,
-                    style = TextStyle(fontSize = 72.sp, fontWeight = FontWeight.Bold, color = Color.White),
+                    style = TextStyle(fontSize = 72.sp, fontWeight = FontWeight.Bold, color = Color.White, fontFamily = OpenRundeFontFamily, letterSpacing = (-0.5).sp),
                     animationEnabled = true
                 )
                 
