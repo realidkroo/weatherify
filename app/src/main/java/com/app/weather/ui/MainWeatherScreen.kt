@@ -162,6 +162,7 @@ private const val CLOUD_SHADER = """
 """
 
 
+@OptIn(ExperimentalLayoutApi::class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun MainWeatherScreen(
@@ -500,46 +501,33 @@ fun MainWeatherScreen(
                     val excessDpPx = (offset - 800f).coerceAtLeast(0f)
                     translationY = (680f - 540f * prog).dp.toPx() - excessDpPx
                 }) {
-                    HourlyForecastWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
-
-                    Spacer(Modifier.height(12.dp))
-                    DailyForecastWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
-
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        maxItemsInEachRow = 2
+                    ) {
+                        Box(modifier = Modifier.fillMaxWidth()) { HourlyForecastWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        Box(modifier = Modifier.fillMaxWidth()) { DailyForecastWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        
                         Box(modifier = Modifier.weight(1f)) { UVIndexWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                         Box(modifier = Modifier.weight(1f)) { FeelsLikeWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        
                         Box(modifier = Modifier.weight(1f)) { PrecipitationWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                         Box(modifier = Modifier.weight(1f)) { HumidityWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    MapWidget(data = data)
-
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) { MapWidget(data = data) }
+                        
                         Box(modifier = Modifier.weight(1f)) { WindWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                         Box(modifier = Modifier.weight(1f)) { AirQualityWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        
                         Box(modifier = Modifier.weight(1f)) { VisibilityWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                         Box(modifier = Modifier.weight(1f)) { PressureWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-                    SunriseSunsetWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
-
-                    Spacer(Modifier.height(12.dp))
-                    RainfallWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor)
-
-                    Spacer(Modifier.height(12.dp))
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) { SunriseSunsetWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) { RainfallWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
+                        
                         Box(modifier = Modifier.weight(1f)) { MoonPhaseWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                         Box(modifier = Modifier.weight(1f)) { AveragesWidget(data = data, widgetBg = widgetBg, contentColor = contentColor, secondaryContentColor = secondaryContentColor) }
                     }
@@ -738,7 +726,7 @@ fun AnimatedOdometerText(
     }
 
     val fontSizeVal = style.fontSize.value
-    val rowSpacing = if (fontSizeVal > 0) (-fontSizeVal * 0.12f).dp else 0.dp
+    val rowSpacing = 0.dp
 
     Row(
         modifier = maskModifier.animateContentSize(),
