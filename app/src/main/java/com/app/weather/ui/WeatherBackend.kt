@@ -78,7 +78,7 @@ data class WeatherData(
             type = WeatherType.Clear,
             temp = null, feelsLike = null,
             location = "Locating...", description = "__",
-            aqi = "__", aqiValue = null,
+            aqi = ".. AQI", aqiValue = null,
             wind = "__", windDeg = null, windGust = "__",
             visibility = "__", visibilityM = null,
             humidity = "__", humidityValue = null,
@@ -276,8 +276,12 @@ object WeatherBackend {
             // ── Parallel Tier 2: AQI & UV (Requires Lat/Lon) ─────────────────
             val aqiDeferred = async {
                 try {
-                    val url = "https://api.openweathermap.org/data/2.5/air_pollution?lat=$lat&lon=$lon&appid=$openWeatherApiKey"
-                    JSONObject(URL(url).readText()).getJSONArray("list").getJSONObject(0).getJSONObject("main").getInt("aqi")
+                    val waqiApiKey = BuildConfig.WAQI_API_KEY
+                    val url = "https://api.waqi.info/feed/geo:$lat;$lon/?token=$waqiApiKey"
+                    val jsonResponse = JSONObject(URL(url).readText())
+                    if (jsonResponse.optString("status") == "ok") {
+                        jsonResponse.getJSONObject("data").getInt("aqi")
+                    } else null
                 } catch (_: Exception) { null }
             }
             val uvDeferred = async {
@@ -367,14 +371,7 @@ object WeatherBackend {
 
             // ── Air Quality & UV ──────────────────────────
             val aqiValue = aqiDeferred.await()
-            val aqiLabel = when (aqiValue) {
-                1 -> "Good AQI"
-                2 -> "Fair AQI"
-                3 -> "Moderate AQI"
-                4 -> "Poor AQI"
-                5 -> "Very Poor AQI"
-                else -> "AQI --"
-            }
+            val aqiLabel = if (aqiValue == null) ".. AQI" else "$aqiValue AQI"
 
             val uvIndex = uvDeferred.await()
 

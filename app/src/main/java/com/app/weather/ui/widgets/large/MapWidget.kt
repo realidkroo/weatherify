@@ -82,6 +82,8 @@ fun MapWidget(data: WeatherData, modifier: Modifier = Modifier) {
     if (lat == null || lon == null) {
         Box(
             modifier = modifier
+                .fillMaxWidth()
+                .height(200.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .drawBehind { drawRect(Color.White.copy(alpha = 0.08f)) },
             contentAlignment = Alignment.Center
@@ -109,6 +111,8 @@ fun MapWidget(data: WeatherData, modifier: Modifier = Modifier) {
 
     Box(
         modifier = modifier
+            .fillMaxWidth()
+            .height(200.dp)
             .clip(RoundedCornerShape(24.dp))   // clip BEFORE drawBehind
             .drawBehind {
                 // Background fill

@@ -81,7 +81,7 @@ fun LiquidGlassNavBar(
     var barSXState by remember { mutableFloatStateOf(1f) }
     var barSYState by remember { mutableFloatStateOf(1f) }
     var barOrigX   by remember { mutableFloatStateOf(0.5f) }
-    val iconSt     = remember { mutableStateListOf(1f, 1f, 1f) }
+    val iconSt     = remember { Array(3) { mutableFloatStateOf(1f) } }
 
     val tabBounds = remember { mutableStateMapOf<Int, Pair<Float, Float>>() }
 
@@ -145,7 +145,7 @@ fun LiquidGlassNavBar(
 
                 for (i in 0..2) {
                     iconS[i].step(dt, stiffness = 380f, damping = 20f, animationEnabled = settings.animation)
-                    iconSt[i] = iconS[i].value
+                    iconSt[i].floatValue = iconS[i].value
                 }
 
                 pillXpx = pillX.value; pillWpx = pillW.value; barSXState = barSX.value; barSYState = barSY.value
@@ -250,7 +250,7 @@ fun LiquidGlassNavBar(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 NavTabItem(
-                    index = 0, iconScale = iconSt[0], onBoundsReady = { l, w -> tabBounds[0] = Pair(l, w) },
+                    index = 0, iconScaleProvider = { iconSt[0].floatValue }, onBoundsReady = { l, w -> tabBounds[0] = Pair(l, w) },
                     onClick = { hapticTick(view); onNavigate(Destination.Weather); iconS[0].impulse(8f) },
                     onHoverChange = { h -> iconS[0].target = if (h) 1.2f else 1f }
                 ) {
@@ -260,7 +260,7 @@ fun LiquidGlassNavBar(
                 }
 
                 NavTabItem(
-                    index = 1, iconScale = iconSt[1], onBoundsReady = { l, w -> tabBounds[1] = Pair(l, w) },
+                    index = 1, iconScaleProvider = { iconSt[1].floatValue }, onBoundsReady = { l, w -> tabBounds[1] = Pair(l, w) },
                     onClick = { hapticTick(view); onNavigate(Destination.Search); iconS[1].impulse(8f) },
                     onHoverChange = { h -> iconS[1].target = if (h) 1.2f else 1f }
                 ) {
@@ -268,7 +268,7 @@ fun LiquidGlassNavBar(
                 }
 
                 NavTabItem(
-                    index = 2, iconScale = iconSt[2], onBoundsReady = { l, w -> tabBounds[2] = Pair(l, w) },
+                    index = 2, iconScaleProvider = { iconSt[2].floatValue }, onBoundsReady = { l, w -> tabBounds[2] = Pair(l, w) },
                     onClick = { hapticTick(view); onNavigate(Destination.Settings); iconS[2].impulse(8f) },
                     onHoverChange = { h -> iconS[2].target = if (h) 1.2f else 1f }
                 ) {
@@ -280,7 +280,7 @@ fun LiquidGlassNavBar(
 }
 
 @Composable
-private fun NavTabItem(index: Int, iconScale: Float, onBoundsReady: (leftPx: Float, widthPx: Float) -> Unit, onClick: () -> Unit, onHoverChange: (Boolean) -> Unit, content: @Composable () -> Unit) {
+private fun NavTabItem(index: Int, iconScaleProvider: () -> Float, onBoundsReady: (leftPx: Float, widthPx: Float) -> Unit, onClick: () -> Unit, onHoverChange: (Boolean) -> Unit, content: @Composable () -> Unit) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     LaunchedEffect(isPressed) { onHoverChange(isPressed) }
@@ -291,6 +291,9 @@ private fun NavTabItem(index: Int, iconScale: Float, onBoundsReady: (leftPx: Flo
             .clip(RoundedCornerShape(50))
             .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
             .padding(horizontal = 28.dp, vertical = 10.dp)
-            .graphicsLayer { scaleX = iconScale; scaleY = iconScale }
+            .graphicsLayer { 
+                val scale = iconScaleProvider()
+                scaleX = scale; scaleY = scale 
+            }
     ) { content() }
 }

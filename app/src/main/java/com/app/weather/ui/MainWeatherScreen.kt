@@ -617,7 +617,7 @@ fun MainWeatherScreen(
         AnimatedOdometerText(
             temp = displayTemp,
             snapTo = forceSnap,
-            style = TextStyle(fontSize = 130.sp, fontWeight = FontWeight.Bold, color = contentColor, fontFamily = OpenRundeFontFamily, letterSpacing = (-0.5).sp),
+            style = TextStyle(fontSize = 130.sp, fontWeight = FontWeight.Bold, color = contentColor, fontFamily = OpenRundeFontFamily, letterSpacing = (-2).sp),
             animationEnabled = settings.animation,
             modifier = Modifier.graphicsLayer {
                 val prog = smoothProgress.value
@@ -639,49 +639,68 @@ fun MainWeatherScreen(
             }
         )
 
-        var currentTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-        LaunchedEffect(Unit) {
-            while(true) {
-                delay(1000)
-                currentTickMs = System.currentTimeMillis()
-            }
+        LastUpdatedWidget(
+            data = data,
+            settings = settings,
+            contentColor = contentColor,
+            smoothProgressProvider = { smoothProgress.value },
+            screenWidthPx = screenWidthPx,
+            scrollOffsetProvider = { scrollOffset.floatValue }
+        )
+    }
+}
+
+@Composable
+private fun LastUpdatedWidget(
+    data: WeatherData,
+    settings: AppSettings,
+    contentColor: Color,
+    smoothProgressProvider: () -> Float,
+    screenWidthPx: Float,
+    scrollOffsetProvider: () -> Float
+) {
+    var currentTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while(true) {
+            delay(1000)
+            currentTickMs = System.currentTimeMillis()
         }
+    }
 
-        val updateText by remember(data.lastUpdatedMs, settings.provider, settings.headerType, data.location) {
-            derivedStateOf {
-                val providerName = settings.provider.lowercase()
-                val cityInfoStr = if (settings.headerType == HeaderType.Standard) "" else "${data.location.lowercase()} - "
-                val elapsedSec = ((currentTickMs - data.lastUpdatedMs) / 1000).coerceAtLeast(0)
+    val updateText by remember(data.lastUpdatedMs, settings.provider, settings.headerType, data.location) {
+        derivedStateOf {
+            val providerName = settings.provider.lowercase()
+            val cityInfoStr = if (settings.headerType == HeaderType.Standard) "" else "${data.location.lowercase()} - "
+            val elapsedSec = ((currentTickMs - data.lastUpdatedMs) / 1000).coerceAtLeast(0)
 
-                val timeString = when {
-                    data.lastUpdatedMs == 0L -> "Connecting..."
-                    data.temp == null && data.lastUpdatedMs > 0L -> "Cached — refreshing..."
-                    elapsedSec < 15 -> "Updated just now"
-                    elapsedSec < 60 -> "Updated $elapsedSec seconds ago"
-                    else -> "Updated at ${data.lastUpdated}"
-                }
-
-                "${cityInfoStr}$timeString from $providerName"
+            val timeString = when {
+                data.lastUpdatedMs == 0L -> "Connecting..."
+                data.temp == null && data.lastUpdatedMs > 0L -> "Cached — refreshing..."
+                elapsedSec < 15 -> "Updated just now"
+                elapsedSec < 60 -> "Updated $elapsedSec seconds ago"
+                else -> "Updated at ${data.lastUpdated}"
             }
-        }
 
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.wrapContentWidth().graphicsLayer {
-            val prog = smoothProgress.value
-            translationY = (640f - 550f * prog).dp.toPx()
-            val centerX = (screenWidthPx - size.width) / 2f
-            val leftX = 32.dp.toPx()
-            translationX = centerX + (leftX - centerX) * prog
-            
-            if (settings.blur) {
-                val offset = scrollOffset.floatValue
-                val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
-                if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.DECAL).asComposeRenderEffect()
-            }
-        }) {
-            Icon(Icons.Default.Navigation, contentDescription = null, tint = contentColor.copy(alpha = 0.8f), modifier = Modifier.size(10.dp).graphicsLayer { rotationZ = 45f })
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(text = updateText, color = contentColor.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
+            "${cityInfoStr}$timeString from $providerName"
         }
+    }
+
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.wrapContentWidth().graphicsLayer {
+        val prog = smoothProgressProvider()
+        translationY = (640f - 550f * prog).dp.toPx()
+        val centerX = (screenWidthPx - size.width) / 2f
+        val leftX = 32.dp.toPx()
+        translationX = centerX + (leftX - centerX) * prog
+        
+        if (settings.blur) {
+            val offset = scrollOffsetProvider()
+            val pullBlurPx = if (offset < 0f) (-offset / 8f).coerceIn(0f, 15f).dp.toPx() else 0f
+            if (pullBlurPx > 0f) renderEffect = android.graphics.RenderEffect.createBlurEffect(pullBlurPx, pullBlurPx, android.graphics.Shader.TileMode.DECAL).asComposeRenderEffect()
+        }
+    }) {
+        Icon(Icons.Default.Navigation, contentDescription = null, tint = contentColor.copy(alpha = 0.8f), modifier = Modifier.size(10.dp).graphicsLayer { rotationZ = 45f })
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(text = updateText, color = contentColor.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -726,7 +745,11 @@ fun AnimatedOdometerText(
     }
 
     val fontSizeVal = style.fontSize.value
-    val rowSpacing = 0.dp
+    val rowSpacing = if (style.letterSpacing.isSp) {
+        (style.letterSpacing.value * 3f).dp
+    } else {
+        0.dp
+    }
 
     Row(
         modifier = maskModifier.animateContentSize(),

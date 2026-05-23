@@ -29,6 +29,7 @@ android {
         buildConfigField("String", "BMKG_API_KEY", "\"${secrets.getProperty("BMKG_API_KEY") ?: ""}\"")
         buildConfigField("String", "OPENMAP_API_KEY", "\"${secrets.getProperty("OPENMAP_API_KEY") ?: ""}\"")
         buildConfigField("String", "GOOGLE_API_KEY", "\"${secrets.getProperty("GOOGLE_API_KEY") ?: ""}\"")
+        buildConfigField("String", "WAQI_API_KEY", "\"${secrets.getProperty("WAQI_API_KEY") ?: "demo"}\"")
     }
 
     buildTypes {
